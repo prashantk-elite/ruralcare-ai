@@ -1,0 +1,206 @@
+{
+  "version": "v1-20261017",
+  "synthetic": true,
+  "best_model": "logistic_regression",
+  "features": [
+    "Glucose",
+    "BloodPressure",
+    "BMI",
+    "Age"
+  ],
+  "target": "synthetic outcome",
+  "dataset": {
+    "source": "synthetic generator (seed 42)",
+    "rows": 800,
+    "split": "70/15/15 stratified, seed 42"
+  },
+  "test_metrics": {
+    "n": 120,
+    "positives": 39,
+    "accuracy": 0.825,
+    "precision": 0.78125,
+    "recall_sensitivity": 0.6410256410256411,
+    "specificity": 0.9135802469135802,
+    "f1": 0.704225352112676,
+    "roc_auc": 0.8936372269705604,
+    "pr_auc": 0.795542264957158,
+    "confusion_matrix": [
+      [
+        74,
+        7
+      ],
+      [
+        14,
+        25
+      ]
+    ]
+  },
+  "all_models": {
+    "logistic_regression": {
+      "train_seconds": 0.011,
+      "cv_roc_auc_mean": 0.8716439860913544,
+      "cv_roc_auc_std": 0.027074590444729995,
+      "validation": {
+        "n": 120,
+        "positives": 39,
+        "accuracy": 0.775,
+        "precision": 0.6578947368421053,
+        "recall_sensitivity": 0.6410256410256411,
+        "specificity": 0.8395061728395061,
+        "f1": 0.6493506493506493,
+        "roc_auc": 0.8572333016777461,
+        "pr_auc": 0.7419904406907996,
+        "confusion_matrix": [
+          [
+            68,
+            13
+          ],
+          [
+            14,
+            25
+          ]
+        ]
+      },
+      "test": {
+        "n": 120,
+        "positives": 39,
+        "accuracy": 0.825,
+        "precision": 0.78125,
+        "recall_sensitivity": 0.6410256410256411,
+        "specificity": 0.9135802469135802,
+        "f1": 0.704225352112676,
+        "roc_auc": 0.8936372269705604,
+        "pr_auc": 0.795542264957158,
+        "confusion_matrix": [
+          [
+            74,
+            7
+          ],
+          [
+            14,
+            25
+          ]
+        ]
+      }
+    },
+    "decision_tree": {
+      "train_seconds": 0.007,
+      "cv_roc_auc_mean": 0.8339017701912439,
+      "cv_roc_auc_std": 0.027661455344031815,
+      "validation": {
+        "n": 120,
+        "positives": 39,
+        "accuracy": 0.775,
+        "precision": 0.65,
+        "recall_sensitivity": 0.6666666666666666,
+        "specificity": 0.8271604938271605,
+        "f1": 0.6582278481012658,
+        "roc_auc": 0.8054764165875277,
+        "pr_auc": 0.6167887252760033,
+        "confusion_matrix": [
+          [
+            67,
+            14
+          ],
+          [
+            13,
+            26
+          ]
+        ]
+      },
+      "test": {
+        "n": 120,
+        "positives": 39,
+        "accuracy": 0.75,
+        "precision": 0.6666666666666666,
+        "recall_sensitivity": 0.46153846153846156,
+        "specificity": 0.8888888888888888,
+        "f1": 0.5454545454545454,
+        "roc_auc": 0.7510288065843622,
+        "pr_auc": 0.610787904905552,
+        "confusion_matrix": [
+          [
+            72,
+            9
+          ],
+          [
+            21,
+            18
+          ]
+        ]
+      }
+    },
+    "random_forest": {
+      "train_seconds": 0.451,
+      "cv_roc_auc_mean": 0.8560736525999684,
+      "cv_roc_auc_std": 0.02879933792239179,
+      "validation": {
+        "n": 120,
+        "positives": 39,
+        "accuracy": 0.7916666666666666,
+        "precision": 0.6944444444444444,
+        "recall_sensitivity": 0.6410256410256411,
+        "specificity": 0.8641975308641975,
+        "f1": 0.6666666666666666,
+        "roc_auc": 0.8477366255144033,
+        "pr_auc": 0.724444859992687,
+        "confusion_matrix": [
+          [
+            70,
+            11
+          ],
+          [
+            14,
+            25
+          ]
+        ]
+      },
+      "test": {
+        "n": 120,
+        "positives": 39,
+        "accuracy": 0.7916666666666666,
+        "precision": 0.7692307692307693,
+        "recall_sensitivity": 0.5128205128205128,
+        "specificity": 0.9259259259259259,
+        "f1": 0.6153846153846154,
+        "roc_auc": 0.8505856283634061,
+        "pr_auc": 0.7346184148655541,
+        "confusion_matrix": [
+          [
+            75,
+            6
+          ],
+          [
+            19,
+            20
+          ]
+        ]
+      }
+    }
+  },
+  "permutation_importance_roc_auc": {
+    "Glucose": {
+      "mean": 0.33241532130421025,
+      "std": 0.07292995940054306
+    },
+    "BloodPressure": {
+      "mean": -0.0010446343779676793,
+      "std": 0.0020832647526144855
+    },
+    "BMI": {
+      "mean": -1.582779360552733e-05,
+      "std": 0.007834022367403591
+    },
+    "Age": {
+      "mean": 0.04240265906932579,
+      "std": 0.016902268019397725
+    }
+  },
+  "limitations": [
+    "Public dataset population differs from rural Jharkhand; generalisation is unknown",
+    "Small sample; wide uncertainty",
+    "Score is uncalibrated and is not a diagnosis",
+    "Permutation importance shows model reliance, not causation",
+    "SYNTHETIC DATA: metrics cannot indicate real-world performance"
+  ]
+}
