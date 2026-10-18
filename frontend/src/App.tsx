@@ -1,6 +1,7 @@
 import { useState, useEffect, FormEvent } from "react";
 import { Routes, Route, NavLink, Navigate } from "react-router-dom";
 import { api, setToken } from "./api";
+import { Landing, Shell, BarChart, Lang } from "./ui";
 
 const MENU: Record<string, [string, string][]> = {
   worker: [["/", "Dashboard"], ["/participants", "Participants"], ["/screening", "Screening"], ["/nutrition", "Nutrition"], ["/followups", "Follow-ups"], ["/guide", "Guide"]],
@@ -30,12 +31,23 @@ function Login({ onLogin }: { onLogin: (role: string) => void }) {
     <p className="muted">Try: worker@demo.local, researcher@demo.local, admin@demo.local</p></div></main>;
 }
 
-function Dashboard() {
+function ModelKpi() {
+  const { data, loading } = useLoad<any>("/api/research/models");
+  const v = loading ? "…" : !data || data.status ? "No model trained" : data.synthetic ? "Synthetic demo" : data.best_model;
+  return <div className="card kpi"><b style={{ fontSize: 20 }}>{v}</b><span>Research model status</span></div>;
+}
+function Dashboard({ role }: { role: string }) {
   const { data, error, loading } = useLoad<any>("/api/analytics/community");
-  const tbl = (title: string, rows: any[]) => <div className="card"><h2>{title}</h2><div className="tw"><table><thead><tr><th>Group</th><th>Participants</th></tr></thead>
-    <tbody>{rows.map(r => <tr key={r.group}><td>{r.group}</td><td>{r.suppressed ? `Suppressed (<${data.min_group_size})` : r.count}</td></tr>)}</tbody></table></div></div>;
-  return <><h1>Community Insights</h1><div className="note">Aggregate counts only. Small groups are hidden. Registered participants in this deployment may be demo entries.</div>
-    <Status loading={loading} error={error} />{data && <>{tbl("By community", data.by_community)}{tbl("By age band", data.by_age_band)}</>}</>;
+  const shown = data ? data.by_community.reduce((n: number, g: any) => n + (g.count || 0), 0) : 0;
+  const hidden = data ? data.by_community.filter((g: any) => g.suppressed).length : 0;
+  return <><h1>Community Health Dashboard</h1><div className="note"><b>DEMO DATA:</b> aggregate counts only. Groups under {data?.min_group_size ?? 5} are hidden to protect privacy. Screening categories are not diagnoses.</div>
+    <Status loading={loading} error={error} />
+    {data && <><div className="kpis"><div className="card kpi"><b>{data.by_community.length}</b><span>Communities represented</span></div>
+      <div className="card kpi"><b>{shown}</b><span>Participants in visible groups</span></div><div className="card kpi"><b>{hidden}</b><span>Groups hidden (small)</span></div>
+      {role !== "worker" ? <ModelKpi /> : <div className="card kpi"><b style={{ fontSize: 20 }}>Per screening</b><span>Model output appears after an assessment</span></div>}</div>
+      <div className="row"><div className="card"><h2>By community</h2><BarChart title="Participants by community" rows={data.by_community.map((g: any) => ({ label: String(g.group), value: g.count }))} /></div>
+        <div className="card"><h2>By age band</h2><BarChart title="Participants by age band" rows={data.by_age_band.map((g: any) => ({ label: String(g.group), value: g.count }))} /></div></div>
+      {!data.by_community.length && <div className="card">No participants yet. A health worker can register the first one under Participants.</div>}</>}</>;
 }
 
 function Participants() {
@@ -133,13 +145,12 @@ function Audit() {
 
 export default function App() {
   const [role, setRole] = useState<string | null>(null);
-  if (!role) return <Login onLogin={setRole} />;
-  const items = MENU[role] || MENU.worker;
-  return <><header><b>RuralCare AI</b>{items.map(([to, l]) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "active" : ""}>{l}</NavLink>)}
-    <button onClick={() => { setToken(""); setRole(null); }}>Sign out</button></header>
-    <main><Routes><Route path="/" element={<Dashboard />} />
+  const [stage, setStage] = useState<"landing" | "login">("landing");
+  const [lang, setLang] = useState<Lang>("en");
+  if (!role) return stage === "landing" ? <Landing lang={lang} setLang={setLang} onStart={() => setStage("login")} /> : <Login onLogin={setRole} />;
+  return <Shell role={role} items={MENU[role] || MENU.worker} lang={lang} setLang={setLang} onOut={() => { setToken(""); setRole(null); setStage("landing"); }}>
+    <Routes><Route path="/" element={<Dashboard role={role} />} />
       {role === "worker" && <><Route path="/participants" element={<Participants />} /><Route path="/screening" element={<Screening />} /><Route path="/nutrition" element={<Nutrition />} /><Route path="/followups" element={<Followups />} /></>}
       {role !== "worker" && <Route path="/lab" element={<Lab />} />}{role === "admin" && <Route path="/audit" element={<Audit />} />}
-      <Route path="/guide" element={<Guide />} /><Route path="*" element={<Navigate to="/" />} /></Routes></main>
-    <footer style={{ textAlign: "center", padding: 16 }} className="muted">Academic research prototype. Not a diagnostic device. Demo data only.</footer></>;
+      <Route path="/guide" element={<Guide />} /><Route path="*" element={<Navigate to="/" />} /></Routes></Shell>;
 }
