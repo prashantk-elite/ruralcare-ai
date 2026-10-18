@@ -8,13 +8,12 @@ import { AdminPage } from "./pages4";
 import { Followups2, NutritionInsights, PublicHome } from "./pages5";
 import { useAutoTranslate } from "./i18n";
 import { ThemeButton } from "./theme";
-import NewDashboard from "./Dashboard";
 
 const MENU: Record<string, [string, string][]> = {
-  worker: [["/", "Dashboard"], ["/new-dashboard", "New dashboard"], ["/participants", "Participants"], ["/screening", "Screening"], ["/nutrition", "Nutrition"], ["/followups", "Follow-ups"], ["/nutrition-insights", "Nutrition insights"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
-  participant: [["/", "Home"], ["/new-dashboard", "New dashboard"], ["/nutrition", "Nutrition"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
-  researcher: [["/", "Dashboard"], ["/new-dashboard", "New dashboard"], ["/lab", "Research Lab"], ["/nutrition-insights", "Nutrition insights"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
-  admin: [["/", "Dashboard"], ["/new-dashboard", "New dashboard"], ["/lab", "Research Lab"], ["/audit", "Audit log"], ["/admin", "Admin"], ["/nutrition-insights", "Nutrition insights"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
+  worker: [["/", "Dashboard"], ["/participants", "Participants"], ["/screening", "Screening"], ["/nutrition", "Nutrition"], ["/followups", "Follow-ups"], ["/nutrition-insights", "Nutrition insights"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
+  participant: [["/", "Home"], ["/nutrition", "Nutrition"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
+  researcher: [["/", "Dashboard"], ["/lab", "Research Lab"], ["/nutrition-insights", "Nutrition insights"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
+  admin: [["/", "Dashboard"], ["/lab", "Research Lab"], ["/audit", "Audit log"], ["/admin", "Admin"], ["/nutrition-insights", "Nutrition insights"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
 };
 
 function useLoad<T>(path: string) {
@@ -166,7 +165,6 @@ export default function App() {
   if (!role) return stage === "landing" ? <Landing lang={lang} setLang={setLang} onStart={() => setStage("login")} /> : <Login onLogin={setRole} />;
   return <Shell role={role} items={MENU[role] || MENU.worker} lang={lang} setLang={setLang} onOut={() => { setToken(""); setRole(null); setStage("landing"); }}>
     <Routes><Route path="/" element={role === "participant" ? <PublicHome /> : <Dashboard role={role} />} />
-      <Route path="/new-dashboard" element={<NewDashboard embedded />} />
       {role === "worker" && <><Route path="/participants" element={<Participants />} /><Route path="/screening" element={<Wizard />} /><Route path="/nutrition" element={<Nutrition2 />} /><Route path="/participants/:id" element={<Profile />} /><Route path="/followups" element={<Followups2 />} /></>}
       {(role === "researcher" || role === "admin") && <Route path="/lab" element={<LabTabs />} />}{role === "participant" && <Route path="/nutrition" element={<Nutrition2 />} />}{role === "admin" && <><Route path="/audit" element={<Audit />} /><Route path="/admin" element={<AdminPage />} /></>}
       <Route path="/guide" element={<Guide />} /><Route path="/nutrition-insights" element={<NutritionInsights />} /><Route path="/help" element={<Help />} /><Route path="/notifications" element={<Notifications />} /><Route path="/settings" element={<Settings role={role} />} /><Route path="*" element={<Navigate to="/" />} /></Routes></Shell>;
