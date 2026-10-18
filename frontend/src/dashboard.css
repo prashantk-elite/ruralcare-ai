@@ -24,6 +24,8 @@
 .rc-app a { color: inherit; text-decoration: none; }
 .rc-app :focus-visible { outline: 2px solid var(--rc-accent-2); outline-offset: 2px; border-radius: 8px; }
 
+.rc-app.rc-embedded { grid-template-columns: minmax(0, 1fr); min-height: 0; border-radius: 18px; }
+
 /* ---------- Sidebar ---------- */
 .rc-side {
   display: flex; flex-direction: column; gap: 18px;

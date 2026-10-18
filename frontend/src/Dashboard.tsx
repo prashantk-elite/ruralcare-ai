@@ -145,13 +145,14 @@ const menu = ["Dashboard", "Participants", "Screenings", "Nutrition", "Follow-up
 const more = ["Settings", "Help & Support"];
 
 /* ---------- Page ---------- */
-export default function Dashboard({ data = demoData }: { data?: DashboardData }) {
+export default function Dashboard({ data = demoData, embedded = false }: { data?: DashboardData; embedded?: boolean }) {
   const stat = (v: number | null) => (v === null ? "Hidden" : v.toLocaleString());
   const hiddenNote = "Counts below the minimum group size are hidden to protect privacy.";
   const weightMax = Math.max(...data.weight.map((w) => w.value)) * 1.15;
 
   return (
-    <div className="rc-app">
+    <div className={"rc-app" + (embedded ? " rc-embedded" : "")}>
+      {!embedded && (
       <aside className="rc-side" aria-label="Main navigation">
         <div className="rc-brand">RuralCare<span> AI</span></div>
         <nav>
@@ -171,6 +172,7 @@ export default function Dashboard({ data = demoData }: { data?: DashboardData })
           <span>Not a medical device. No diagnoses or medication advice.</span>
         </div>
       </aside>
+      )}
 
       <main className="rc-main">
         <header className="rc-top">
