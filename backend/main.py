@@ -247,11 +247,12 @@ class NutritionReq(BaseModel):
     budget_tier: int = Field(2, ge=1, le=3)
     allergies: list[str] = []
     available_foods: Optional[list[str]] = None
+    day: int = Field(0, ge=0, le=6)
 
 
 @app.post("/api/nutrition/recommendations")
 def nutrition(b: NutritionReq, u=Depends(need("worker", "participant"))):
-    return recommend(b.diet, b.budget_tier, b.allergies, b.available_foods)
+    return recommend(b.diet, b.budget_tier, b.allergies, b.available_foods, b.day)
 
 
 @app.get("/api/analytics/community")
@@ -347,3 +348,21 @@ def withdraw_consent(pid: int, u=Depends(need("worker"))):
         raise HTTPException(404, "No active consent in your scope")
     audit(u["uid"], "withdraw_consent", "participant", pid)
     return {"withdrawn": True}
+
+
+@app.get("/api/participants/{pid}")
+def participant_profile(pid: int, u=Depends(need("worker"))):
+    c = db()
+    p = c.execute("SELECT id,code,age_band,community,language,created_at FROM participants WHERE id=? AND worker_id=?",
+                  (pid, u["uid"])).fetchone()
+    if not p:
+        c.close()
+        raise HTTPException(404, "Not found in your scope")
+    consents = c.execute("SELECT version,granted_at,withdrawn_at FROM consents WHERE participant_id=? ORDER BY id DESC", (pid,)).fetchall()
+    screenings = c.execute("SELECT id,recorded_at,age,height_cm,weight_kg,systolic,diastolic,glucose,glucose_type,urgent "
+                           "FROM screenings WHERE participant_id=? ORDER BY recorded_at DESC", (pid,)).fetchall()
+    fups = c.execute("SELECT id,due_at,status FROM followups WHERE participant_id=? ORDER BY due_at", (pid,)).fetchall()
+    c.close()
+    audit(u["uid"], "view", "participant", pid)
+    return {"participant": dict(p), "consents": [dict(r) for r in consents],
+            "screenings": [dict(r) for r in screenings], "followups": [dict(r) for r in fups]}

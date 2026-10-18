@@ -27,7 +27,7 @@ def allowed(f, diet, budget, allergies, available):
             and (available is None or f["n"] in available))
 
 
-def recommend(diet="veg", budget=2, allergies=(), available=None):
+def recommend(diet="veg", budget=2, allergies=(), available=None, day=0):
     allergies = [a.lower() for a in allergies]
     used, plan = {}, []
     for meal, slots in MEALS:
@@ -39,7 +39,7 @@ def recommend(diet="veg", budget=2, allergies=(), available=None):
             if not cand:
                 items.append({"slot": slot, "food": None, "note": "No suitable option with current filters"})
                 continue
-            f = cand[0]
+            f = cand[day % min(len(cand), 3)]  # day rotates among the top options for a weekly view
             used[f["n"]] = used.get(f["n"], 0) + 1
             items.append({"slot": slot, "food": f["n"], "group": f["g"], "cost_tier": f["t"],
                           "nutrient_data": "Nutritional data unavailable",

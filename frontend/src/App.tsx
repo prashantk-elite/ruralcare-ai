@@ -1,8 +1,9 @@
 import { useState, useEffect, FormEvent } from "react";
-import { Routes, Route, NavLink, Navigate } from "react-router-dom";
+import { Routes, Route, NavLink, Navigate, Link } from "react-router-dom";
 import { api, setToken } from "./api";
 import { Landing, Shell, BarChart, Lang } from "./ui";
 import { Wizard, LabTabs, Help, Notifications, Settings } from "./pages2";
+import { Profile, Nutrition2 } from "./pages3";
 
 const MENU: Record<string, [string, string][]> = {
   worker: [["/", "Dashboard"], ["/participants", "Participants"], ["/screening", "Screening"], ["/nutrition", "Nutrition"], ["/followups", "Follow-ups"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
@@ -58,7 +59,7 @@ function Participants() {
     try { const r = await api("/api/participants", { method: "POST", body: JSON.stringify(f) }); setMsg("Registered " + r.code); reload(); } catch (x: any) { setMsg(x.message); } };
   return <><h1>Participants</h1><Status loading={loading} error={error} />
     {data && (data.length ? <div className="card tw"><table><thead><tr><th>ID</th><th>Code</th><th>Age band</th><th>Community</th></tr></thead>
-      <tbody>{data.map(p => <tr key={p.id}><td>{p.id}</td><td>{p.code}</td><td>{p.age_band}</td><td>{p.community}</td></tr>)}</tbody></table></div>
+      <tbody>{data.map(p => <tr key={p.id}><td>{p.id}</td><td><Link to={"/participants/" + p.id}>{p.code}</Link></td><td>{p.age_band}</td><td>{p.community}</td></tr>)}</tbody></table></div>
       : <div className="card">No participants yet. Register the first one below.</div>)}
     <form className="card" onSubmit={add}><h2>Register participant</h2><div className="row">
       <div><label htmlFor="ab">Age band (adults)</label><select id="ab" value={f.age_band} onChange={e => setF({ ...f, age_band: e.target.value })}>{["18-29", "30-44", "45-59", "60+"].map(x => <option key={x}>{x}</option>)}</select></div>
@@ -151,7 +152,7 @@ export default function App() {
   if (!role) return stage === "landing" ? <Landing lang={lang} setLang={setLang} onStart={() => setStage("login")} /> : <Login onLogin={setRole} />;
   return <Shell role={role} items={MENU[role] || MENU.worker} lang={lang} setLang={setLang} onOut={() => { setToken(""); setRole(null); setStage("landing"); }}>
     <Routes><Route path="/" element={<Dashboard role={role} />} />
-      {role === "worker" && <><Route path="/participants" element={<Participants />} /><Route path="/screening" element={<Wizard />} /><Route path="/nutrition" element={<Nutrition />} /><Route path="/followups" element={<Followups />} /></>}
+      {role === "worker" && <><Route path="/participants" element={<Participants />} /><Route path="/screening" element={<Wizard />} /><Route path="/nutrition" element={<Nutrition2 />} /><Route path="/participants/:id" element={<Profile />} /><Route path="/followups" element={<Followups />} /></>}
       {role !== "worker" && <Route path="/lab" element={<LabTabs />} />}{role === "admin" && <Route path="/audit" element={<Audit />} />}
       <Route path="/guide" element={<Guide />} /><Route path="/help" element={<Help />} /><Route path="/notifications" element={<Notifications />} /><Route path="/settings" element={<Settings role={role} />} /><Route path="*" element={<Navigate to="/" />} /></Routes></Shell>;
 }

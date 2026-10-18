@@ -53,3 +53,15 @@ def test_followup_lifecycle():
     assert c.patch(f"/api/followups/{f['id']}/complete", headers=h).status_code == 200
 def test_researcher_cannot_create_followup():
     assert c.post("/api/followups", headers=tok("researcher@demo.local"), json={"participant_id": 1, "due_at": 5}).status_code == 403
+
+def test_profile_scope_and_history():
+    h = tok("worker@demo.local")
+    p = c.post("/api/participants", headers=h, json={"age_band": "30-44", "community": "C4", "consent_given": True}).json()
+    c.post("/api/screenings", headers=h, json={"participant_id": p["id"], "age": 40, "height_cm": 160, "weight_kg": 60})
+    r = c.get(f"/api/participants/{p['id']}", headers=h).json()
+    assert r["participant"]["code"] == p["code"] and len(r["screenings"]) == 1 and r["consents"][0]["withdrawn_at"] is None
+    assert c.get(f"/api/participants/{p['id']}", headers=tok("researcher@demo.local")).status_code == 403
+def test_day_rotation_keeps_allergy_filter():
+    for d in range(7):
+        foods = {i["food"] for m in recommend(diet="non", budget=3, allergies=["peanut", "egg"], day=d)["plan"] for i in m["items"]}
+        assert not foods & {"Roasted peanuts", "Egg"}
