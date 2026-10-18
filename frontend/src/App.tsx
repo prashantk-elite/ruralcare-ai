@@ -5,11 +5,12 @@ import { Landing, Shell, BarChart, Lang } from "./ui";
 import { Wizard, LabTabs, Help, Notifications, Settings } from "./pages2";
 import { Profile, Nutrition2 } from "./pages3";
 import { AdminPage } from "./pages4";
-import { Followups2, NutritionInsights } from "./pages5";
+import { Followups2, NutritionInsights, PublicHome } from "./pages5";
 import { useAutoTranslate } from "./i18n";
 
 const MENU: Record<string, [string, string][]> = {
   worker: [["/", "Dashboard"], ["/participants", "Participants"], ["/screening", "Screening"], ["/nutrition", "Nutrition"], ["/followups", "Follow-ups"], ["/nutrition-insights", "Nutrition insights"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
+  participant: [["/", "Home"], ["/nutrition", "Nutrition"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
   researcher: [["/", "Dashboard"], ["/lab", "Research Lab"], ["/nutrition-insights", "Nutrition insights"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
   admin: [["/", "Dashboard"], ["/lab", "Research Lab"], ["/audit", "Audit log"], ["/admin", "Admin"], ["/nutrition-insights", "Nutrition insights"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
 };
@@ -24,18 +25,25 @@ const Status = ({ loading, error }: { loading: boolean; error: string }) =>
   loading ? <p role="status">Loading…</p> : error ? <p className="err" role="alert">{error}</p> : null;
 
 function Login({ onLogin }: { onLogin: (role: string) => void }) {
-  const [email, setEmail] = useState("worker@demo.local"); const [pw, setPw] = useState(""); const [err, setErr] = useState("");
+  const [mode, setMode] = useState<"in" | "up">("in"); const [email, setEmail] = useState(""); const [pw, setPw] = useState(""); const [pw2, setPw2] = useState("");
+  const [ack, setAck] = useState(false); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
   const submit = async (e: FormEvent) => { e.preventDefault(); setErr("");
-    try { const r = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password: pw }) }); setToken(r.token); onLogin(r.role); }
-    catch (x: any) { setErr(x.message); } };
-  return <main><div className="card"><h1>RuralCare AI</h1>
-    <div className="note">Academic research prototype. Demo accounts only (password <code>demo-only</code>). Not a diagnostic device.</div>
-    <form onSubmit={submit}><label htmlFor="e">Email</label><input id="e" value={email} onChange={e => setEmail(e.target.value)} />
-      <label htmlFor="p">Password</label><input id="p" type="password" value={pw} onChange={e => setPw(e.target.value)} />
-      <p className="err" role="alert">{err}</p><button className="btn">Sign in</button></form>
-    <p className="muted">Try: worker@demo.local, researcher@demo.local, admin@demo.local</p></div></main>;
+    if (mode === "up") { if (pw.length < 10) return setErr("Password must be at least 10 characters."); if (pw !== pw2) return setErr("Passwords do not match."); if (!ack) return setErr("Please confirm the demo notice."); }
+    setBusy(true);
+    try { if (mode === "up") await api("/api/auth/register", { method: "POST", body: JSON.stringify({ email, password: pw }) });
+      const r = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password: pw }) }); setToken(r.token); onLogin(r.role); }
+    catch (x: any) { setErr(x.message); } finally { setBusy(false); } };
+  return <main style={{ maxWidth: 440 }}><div className="card"><h1>RuralCare AI</h1>
+    <div className="note">Academic research prototype. Not a diagnostic device. Do not enter real health information.</div>
+    <div role="tablist" style={{ display: "flex", gap: 6 }}><button role="tab" aria-selected={mode === "in"} className={mode === "in" ? "btn sm" : "btn sec sm"} onClick={() => { setMode("in"); setErr(""); }}>Sign in</button><button role="tab" aria-selected={mode === "up"} className={mode === "up" ? "btn sm" : "btn sec sm"} onClick={() => { setMode("up"); setErr(""); }}>Create account</button></div>
+    <form onSubmit={submit}><label htmlFor="e">Email</label><input id="e" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} />
+      <label htmlFor="p">Password</label><input id="p" type="password" autoComplete={mode === "up" ? "new-password" : "current-password"} value={pw} onChange={e => setPw(e.target.value)} />
+      {mode === "up" && <><label htmlFor="p2">Confirm password</label><input id="p2" type="password" autoComplete="new-password" value={pw2} onChange={e => setPw2(e.target.value)} />
+        <label style={{ fontWeight: 400 }}><input type="checkbox" checked={ack} onChange={e => setAck(e.target.checked)} />I understand this is a demo and I will not enter real health information</label>
+        <p className="muted">New accounts get access to the nutrition planner, guide and help. Health-worker features need administrator approval. Your email is not verified or used to send messages.</p></>}
+      <p className="err" role="alert">{err}</p><button className="btn" disabled={busy}>{busy ? "Please wait…" : mode === "up" ? "Create account" : "Sign in"}</button></form>
+    {mode === "in" && <p className="muted">Demo logins (password demo-only): worker@demo.local, researcher@demo.local, admin@demo.local</p>}</div></main>;
 }
-
 function ModelKpi() {
   const { data, loading } = useLoad<any>("/api/research/models");
   const v = loading ? "…" : !data || data.status ? "No model trained" : data.synthetic ? "Synthetic demo" : data.best_model;
@@ -155,8 +163,8 @@ export default function App() {
   useAutoTranslate(lang);
   if (!role) return stage === "landing" ? <Landing lang={lang} setLang={setLang} onStart={() => setStage("login")} /> : <Login onLogin={setRole} />;
   return <Shell role={role} items={MENU[role] || MENU.worker} lang={lang} setLang={setLang} onOut={() => { setToken(""); setRole(null); setStage("landing"); }}>
-    <Routes><Route path="/" element={<Dashboard role={role} />} />
+    <Routes><Route path="/" element={role === "participant" ? <PublicHome /> : <Dashboard role={role} />} />
       {role === "worker" && <><Route path="/participants" element={<Participants />} /><Route path="/screening" element={<Wizard />} /><Route path="/nutrition" element={<Nutrition2 />} /><Route path="/participants/:id" element={<Profile />} /><Route path="/followups" element={<Followups2 />} /></>}
-      {role !== "worker" && <Route path="/lab" element={<LabTabs />} />}{role === "admin" && <><Route path="/audit" element={<Audit />} /><Route path="/admin" element={<AdminPage />} /></>}
+      {(role === "researcher" || role === "admin") && <Route path="/lab" element={<LabTabs />} />}{role === "participant" && <Route path="/nutrition" element={<Nutrition2 />} />}{role === "admin" && <><Route path="/audit" element={<Audit />} /><Route path="/admin" element={<AdminPage />} /></>}
       <Route path="/guide" element={<Guide />} /><Route path="/nutrition-insights" element={<NutritionInsights />} /><Route path="/help" element={<Help />} /><Route path="/notifications" element={<Notifications />} /><Route path="/settings" element={<Settings role={role} />} /><Route path="*" element={<Navigate to="/" />} /></Routes></Shell>;
 }

@@ -64,3 +64,9 @@ admin (health checks, users with role change and suspend, model versions, privac
 ## Known gaps
 SQLite (not PostgreSQL), minimal token authentication, no password-reset flow, no AI-backed chatbot, Hindi covers labels not long text,
 no verified food-composition or price data yet, no model trained on real data until you run `ml/train.py` with the dataset.
+
+## Open sign-up and its limits
+Anyone can create an account (`POST /api/auth/register`). New accounts are always the limited `participant` role (nutrition planner, guide, help). Only an
+admin can promote someone to `worker` (participant and screening records), `researcher` or `admin`. Registration (5/hour per IP) and failed logins (10 per 10 min)
+are rate limited. Set `DEMO_PASSWORD` on the server to change the seeded demo accounts' password.
+Before real users or real data: use a permanent PostgreSQL database (accounts reset on free hosting), verify email addresses, add password reset, and get institutional approval.

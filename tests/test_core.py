@@ -3,6 +3,7 @@ os.environ["DB_PATH"] = os.path.join(tempfile.mkdtemp(), "t.db")
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 from fastapi.testclient import TestClient
 from main import app
+import main as appmod
 from nutrition import recommend
 c = TestClient(app)
 
@@ -94,3 +95,32 @@ def test_nutrition_feedback_validation_and_suppression():
         assert c.post("/api/nutrition/feedback", headers=h, json={"diet": "veg", "budget_tier": 2, "satisfaction": 4, "adherence": "some", "accessibility": "easy"}).status_code == 201
     out = c.get("/api/analytics/nutrition", headers=tok("researcher@demo.local")).json()
     assert out["enough_data"] and out["total"] == 5
+
+def test_open_registration_gives_limited_role():
+    appmod._hits.clear()
+    r = c.post("/api/auth/register", json={"email": "Person@Example.com", "password": "long-enough-pw"})
+    assert r.status_code == 201 and r.json()["role"] == "participant"
+    assert c.post("/api/auth/register", json={"email": "person@example.com", "password": "long-enough-pw"}).status_code == 409
+    assert c.post("/api/auth/register", json={"email": "not-an-email", "password": "long-enough-pw"}).status_code == 422
+    assert c.post("/api/auth/register", json={"email": "a@b.co", "password": "short"}).status_code == 422
+    h = {"Authorization": "Bearer " + c.post("/api/auth/login", json={"email": "person@example.com", "password": "long-enough-pw"}).json()["token"]}
+    assert c.get("/api/participants", headers=h).status_code == 403
+    assert c.post("/api/participants", headers=h, json={"age_band": "30-44", "community": "C1", "consent_given": True}).status_code == 403
+    assert c.post("/api/screenings", headers=h, json={"participant_id": 1, "age": 40, "height_cm": 160, "weight_kg": 60}).status_code == 403
+    assert c.get("/api/admin/users", headers=h).status_code == 403
+    assert c.post("/api/nutrition/recommendations", headers=h, json={"diet": "veg", "budget_tier": 1}).status_code == 200
+def test_registration_cannot_choose_role_and_is_rate_limited():
+    appmod._hits.clear(); old = appmod.REGISTER_LIMIT; appmod.REGISTER_LIMIT = 2
+    try:
+        for i in range(2):
+            r = c.post("/api/auth/register", json={"email": f"rl{i}@example.com", "password": "long-enough-pw", "role": "admin"})
+            assert r.status_code == 201 and r.json()["role"] == "participant"
+        assert c.post("/api/auth/register", json={"email": "rl9@example.com", "password": "long-enough-pw"}).status_code == 429
+    finally:
+        appmod.REGISTER_LIMIT = old; appmod._hits.clear()
+def test_login_throttle_after_repeated_failures():
+    appmod._hits.clear()
+    for _ in range(appmod.LOGIN_LIMIT):
+        assert c.post("/api/auth/login", json={"email": "worker@demo.local", "password": "wrong"}).status_code == 401
+    assert c.post("/api/auth/login", json={"email": "worker@demo.local", "password": "demo-only"}).status_code == 429
+    appmod._hits.clear()

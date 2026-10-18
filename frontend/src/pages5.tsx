@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
 import { BarChart } from "./ui";
+import { Link } from "react-router-dom";
 
 const sym = (s: string) => s === "completed" ? "✓" : s === "overdue" ? "!" : "•";
 export function Followups2() {
@@ -52,9 +53,16 @@ export function UsersTab() {
   const patch = async (id: number, body: any) => { setErr(""); try { await api(`/api/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(body) }); load(); } catch (x: any) { setErr(x.message); } };
   const create = async () => { setErr(""); try { await api("/api/admin/users", { method: "POST", body: JSON.stringify(f) }); setF({ email: "", role: "worker", password: "" }); load(); } catch (x: any) { setErr(x.message); } };
   return <div className="card tw"><p className="err" role="alert">{err}</p><table><thead><tr><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>{us.map(u => <tr key={u.id}><td>{u.email}</td>
-    <td><select aria-label={"Role for " + u.email} value={u.role} onChange={e => window.confirm(`Change role of ${u.email}?`) && patch(u.id, { role: e.target.value })}>{["worker", "researcher", "admin"].map(r => <option key={r}>{r}</option>)}</select></td><td>{u.status || "active"}</td>
+    <td><select aria-label={"Role for " + u.email} value={u.role} onChange={e => window.confirm(`Change role of ${u.email}?`) && patch(u.id, { role: e.target.value })}>{["participant", "worker", "researcher", "admin"].map(r => <option key={r}>{r}</option>)}</select></td><td>{u.status || "active"}</td>
     <td><button className="btn sec sm" onClick={() => window.confirm(`${u.status === "suspended" ? "Reactivate" : "Suspend"} ${u.email}?`) && patch(u.id, { status: u.status === "suspended" ? "active" : "suspended" })}>{u.status === "suspended" ? "Reactivate" : "Suspend"}</button></td></tr>)}</tbody></table>
-    <h2 style={{ marginTop: 16 }}>Create user</h2><div className="row"><div><label htmlFor="ne">Email</label><input id="ne" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} /></div><div><label htmlFor="nr">Role</label><select id="nr" value={f.role} onChange={e => setF({ ...f, role: e.target.value })}><option>worker</option><option>researcher</option><option>admin</option></select></div></div>
+    <h2 style={{ marginTop: 16 }}>Create user</h2><div className="row"><div><label htmlFor="ne">Email</label><input id="ne" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} /></div><div><label htmlFor="nr">Role</label><select id="nr" value={f.role} onChange={e => setF({ ...f, role: e.target.value })}><option>participant</option><option>worker</option><option>researcher</option><option>admin</option></select></div></div>
     <label htmlFor="np">Initial password (min 10 characters)</label><input id="np" type="password" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} /><button className="btn" onClick={create}>Create user</button>
     <div className="note">You cannot change your own role or status. Role changes and suspensions are recorded in the audit log.</div></div>;
+}
+
+export function PublicHome() {
+  const card = (to: string, t: string, d: string) => <Link to={to} style={{ textDecoration: "none", color: "inherit" }}><div className="card"><h2>{t}</h2><p className="muted">{d}</p></div></Link>;
+  return <><h1>Welcome to RuralCare AI</h1><div className="note alert" role="note"><b>Public demo.</b> Please do not enter real health information. Data on this site is not stored permanently and the site is not a medical service.</div>
+    <div className="g3">{card("/nutrition", "Nutrition planner", "Meal ideas that respect your diet, allergies, food availability and budget.")}{card("/guide", "RuralCare Guide", "Plain-language answers about screening terms and balanced eating.")}{card("/help", "Help", "How the site works, its limits and what to do in an emergency.")}</div>
+    <p className="muted" style={{ marginTop: 12 }}>Screening and participant records are only for approved health workers. An administrator can upgrade your account if you are one.</p></>;
 }

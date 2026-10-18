@@ -1,8 +1,8 @@
 """RuralCare AI API. Educational research prototype: synthetic/demo data only."""
-import os, hmac, hashlib, json, time, base64, sqlite3, secrets
+import os, re, hmac, hashlib, json, time, base64, sqlite3, secrets
 from pathlib import Path
 from typing import Optional, Literal
-from fastapi import FastAPI, Depends, HTTPException, Header
+from fastapi import FastAPI, Depends, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, model_validator
 from nutrition import recommend
@@ -57,7 +57,7 @@ def init():
     if not c.execute("SELECT 1 FROM users").fetchone():  # DEMO accounts only; never use in production
         for email, role in [("admin@demo.local", "admin"), ("worker@demo.local", "worker"),
                             ("researcher@demo.local", "researcher")]:
-            c.execute("INSERT INTO users(email,pw,role) VALUES(?,?,?)", (email, hash_pw("demo-only"), role))
+            c.execute("INSERT INTO users(email,pw,role) VALUES(?,?,?)", (email, hash_pw(os.environ.get("DEMO_PASSWORD", "demo-only")), role))
     c.commit()
     c.close()
 
@@ -105,14 +105,18 @@ class Login(BaseModel):
 
 
 @app.post("/api/auth/login")
-def login(b: Login):
+def login(b: Login, request: Request):
+    key = _ip(request) + "|" + b.email.strip().lower()
+    throttle("login", key, LOGIN_LIMIT, 600)
     c = db()
-    r = c.execute("SELECT * FROM users WHERE email=?", (b.email,)).fetchone()
+    r = c.execute("SELECT * FROM users WHERE email=?", (b.email.strip().lower(),)).fetchone()
     c.close()
     if not r or not check_pw(b.password, r["pw"]):
+        record("login", key)
         raise HTTPException(401, "Incorrect email or password")
     if (r["status"] or "active") == "suspended":
         raise HTTPException(403, "Account suspended")
+    _hits.pop(("login", key), None)
     return {"token": make_token(r["id"], r["role"]), "role": r["role"]}
 
 
@@ -417,7 +421,7 @@ init_extra()
 
 class NewUser(BaseModel):
     email: str = Field(min_length=5, max_length=120)
-    role: Literal["worker", "researcher", "admin"]
+    role: Literal["worker", "researcher", "admin", "participant"]
     password: str = Field(min_length=10, max_length=100)
 
 
@@ -436,7 +440,7 @@ def create_user(b: NewUser, u=Depends(need("admin"))):
 
 
 class UserChange(BaseModel):
-    role: Optional[Literal["worker", "researcher", "admin"]] = None
+    role: Optional[Literal["worker", "researcher", "admin", "participant"]] = None
     status: Optional[Literal["active", "suspended"]] = None
 
 
@@ -469,7 +473,7 @@ class Feedback(BaseModel):
 
 
 @app.post("/api/nutrition/feedback", status_code=201)
-def add_feedback(b: Feedback, u=Depends(need("worker"))):
+def add_feedback(b: Feedback, u=Depends(need("worker", "participant"))):
     """Anonymous, self-reported feedback. Not linked to a participant, and not verified consumption."""
     c = db()
     c.execute("INSERT INTO nutrition_feedback(worker_id,diet,budget_tier,satisfaction,adherence,accessibility,created_at) VALUES(?,?,?,?,?,?,?)",
@@ -492,3 +496,53 @@ def nutrition_analytics(u=Depends(need("admin", "researcher", "worker"))):
             out[key] = [{"group": str(r["k"]), "count": r["n"] if r["n"] >= MIN_GROUP else None, "suppressed": r["n"] < MIN_GROUP} for r in rows]
     c.close()
     return out
+
+
+# ---- Open self-registration (limited "participant" role) and abuse protection ----
+REGISTER_LIMIT = int(os.environ.get("REGISTER_LIMIT_PER_HOUR", "5"))
+LOGIN_LIMIT = int(os.environ.get("LOGIN_LIMIT_PER_10MIN", "10"))
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_hits: dict = {}  # in-memory throttle; resets when the server restarts
+
+
+def _ip(req: Request):
+    fwd = req.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    return fwd or (req.client.host if req.client else "unknown")
+
+
+def throttle(bucket, key, limit, window):
+    now = time.time()
+    recent = [t for t in _hits.get((bucket, key), []) if now - t < window]
+    _hits[(bucket, key)] = recent
+    if len(recent) >= limit:
+        raise HTTPException(429, "Too many attempts. Please wait a while and try again.")
+
+
+def record(bucket, key):
+    _hits.setdefault((bucket, key), []).append(time.time())
+
+
+class Register(BaseModel):
+    email: str = Field(min_length=5, max_length=120)
+    password: str = Field(min_length=10, max_length=100)
+
+
+@app.post("/api/auth/register", status_code=201)
+def register(b: Register, request: Request):
+    """Public sign-up. Always creates the limited 'participant' role; elevated roles are admin-assigned only."""
+    email = b.email.strip().lower()
+    if not EMAIL_RE.match(email):
+        raise HTTPException(422, "Enter a valid email address")
+    ip = _ip(request)
+    throttle("register", ip, REGISTER_LIMIT, 3600)
+    c = db()
+    try:
+        cur = c.execute("INSERT INTO users(email,pw,role,status) VALUES(?,?,'participant','active')", (email, hash_pw(b.password)))
+    except sqlite3.IntegrityError:
+        c.close()
+        raise HTTPException(409, "This email is already registered")
+    c.commit()
+    c.close()
+    record("register", ip)
+    audit(cur.lastrowid, "register", "user", cur.lastrowid)
+    return {"id": cur.lastrowid, "role": "participant"}
