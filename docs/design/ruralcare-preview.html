@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RuralCare AI – Design Preview</title>
+<style>
+:root{
+  --rc-bg:#0F1716; --rc-card:#172521; --rc-card-2:#202C28;
+  --rc-border:rgba(201,241,226,.10); --rc-text:#E8F3EE; --rc-text-dim:#9DB5AC;
+  --rc-primary:#0D9274; --rc-primary-hover:#0B7F65; --rc-mint:#C9F1E2; --rc-mint-soft:#E3F7EF;
+  --rc-light-bg:#F6F9F7; --rc-light-text:#0F1716; --rc-light-dim:#50655E;
+  --rc-ok:#4ADE9E; --rc-warn:#F2B84B; --rc-info:#7FB4F5;
+  --rc-radius:16px; --rc-radius-sm:10px; --rc-ease:180ms ease;
+  --rc-font:"Inter","Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{font-family:var(--rc-font);background:var(--rc-bg);color:var(--rc-text);-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid #7FD6BC;outline-offset:2px;border-radius:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+[hidden]{display:none!important}
+
+/* ---------- LOGIN (Theme B) ---------- */
+#login{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;background:#fff;color:var(--rc-light-text)}
+.l-left{background:linear-gradient(180deg,#D3F3E5 0%,#BFEBD8 70%,#F6F9F7 100%);display:flex;flex-direction:column;justify-content:space-between;padding:48px}
+.l-left svg.art{width:100%;max-width:440px;margin:auto}
+.l-left h2{font-size:26px;color:#0A4A3B;letter-spacing:-.01em}
+.l-left p{color:#3C5C52;margin-top:6px;max-width:34ch;line-height:1.5}
+.l-right{display:flex;align-items:center;justify-content:center;padding:32px}
+.l-card{width:100%;max-width:400px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+.logo .mark{width:30px;height:30px;border-radius:9px;background:var(--rc-primary);display:grid;place-items:center;color:#fff}
+.l-card h1{font-size:28px;margin:28px 0 6px;letter-spacing:-.02em}
+.l-sub{color:var(--rc-light-dim);font-size:14px}
+.l-sub a,.link{color:#0B7F65;font-weight:600;text-decoration:none;background:none;border:0;cursor:pointer;font-size:inherit}
+.l-sub a:hover,.link:hover{text-decoration:underline}
+.field{margin-top:18px}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.inp{position:relative}
+.inp input{width:100%;height:48px;border:1px solid #D5E0DB;background:#F6F9F7;border-radius:12px;padding:0 44px;font-size:15px;color:var(--rc-light-text);transition:border-color var(--rc-ease),box-shadow var(--rc-ease)}
+.inp input:focus{outline:none;border-color:var(--rc-primary);box-shadow:0 0 0 3px rgba(13,146,116,.22);background:#fff}
+.inp input[aria-invalid="true"]{border-color:#B42318}
+.inp .lead{position:absolute;left:14px;top:15px;color:#6B7F78}
+.inp .tail{position:absolute;right:6px;top:4px;width:40px;height:40px;border:0;background:none;color:#50655E;border-radius:10px;cursor:pointer;display:grid;place-items:center}
+.err{color:#B42318;font-size:13px;margin-top:6px;display:flex;gap:6px;align-items:center}
+.row{display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-size:14px}
+.row label{display:flex;gap:8px;align-items:center;color:var(--rc-light-dim)}
+.row input[type=checkbox]{width:18px;height:18px;accent-color:var(--rc-primary)}
+.btn{height:50px;width:100%;margin-top:22px;border:0;border-radius:12px;background:var(--rc-primary);color:#fff;font-weight:700;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 16px rgba(13,146,116,.28);transition:background var(--rc-ease)}
+.btn:hover{background:var(--rc-primary-hover)}
+.btn[disabled]{opacity:.75;cursor:progress}
+.spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.note{margin-top:22px;padding:12px 14px;border-radius:12px;background:var(--rc-mint-soft);color:#245246;font-size:13px;line-height:1.5;display:flex;gap:10px}
+.ok{margin-top:16px;padding:12px 14px;border-radius:12px;background:#E3F7EF;color:#0A4A3B;font-size:14px}
+.back{margin-top:18px}
+
+/* ---------- DASHBOARD (Theme A) ---------- */
+#app{display:grid;grid-template-columns:248px 1fr;min-height:100vh;transition:grid-template-columns var(--rc-ease)}
+#app.collapsed{grid-template-columns:76px 1fr}
+aside{background:var(--rc-card);border-right:1px solid var(--rc-border);padding:20px 14px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh}
+aside .logo{padding:0 8px 18px;color:var(--rc-text)}
+#app.collapsed .lbl,#app.collapsed aside .logo span.t{display:none}
+.nav-h{font-size:11px;letter-spacing:.08em;color:var(--rc-text-dim);padding:12px 10px 4px;text-transform:uppercase}
+#app.collapsed .nav-h{visibility:hidden}
+.nav{display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:var(--rc-text-dim);text-decoration:none;border:0;background:none;width:100%;cursor:pointer;text-align:left;transition:background var(--rc-ease),color var(--rc-ease)}
+.nav:hover{background:rgba(201,241,226,.06);color:var(--rc-text)}
+.nav[aria-current=page]{background:var(--rc-primary);color:#fff;font-weight:600}
+.side-foot{margin-top:auto;border-top:1px solid var(--rc-border);padding-top:12px}
+main{padding:24px 28px 40px;min-width:0}
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.top h1{font-size:22px;letter-spacing:-.01em}
+.top .sub{color:var(--rc-text-dim);font-size:13px;margin-top:2px}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid var(--rc-border)}
+.badge.demo{background:rgba(242,184,75,.12);color:var(--rc-warn);border-color:rgba(242,184,75,.4)}
+.sp{flex:1}
+.search{position:relative;width:min(320px,100%)}
+.search input{width:100%;height:42px;border-radius:12px;border:1px solid var(--rc-border);background:var(--rc-card);padding:0 14px 0 40px;font-size:14px}
+.search input::placeholder{color:var(--rc-text-dim)}
+.search svg{position:absolute;left:13px;top:12px;color:var(--rc-text-dim)}
+.iconbtn{width:42px;height:42px;border-radius:12px;border:1px solid var(--rc-border);background:var(--rc-card);display:grid;place-items:center;cursor:pointer;color:var(--rc-text)}
+.profile{display:flex;align-items:center;gap:10px;height:42px;padding:0 12px 0 6px;border-radius:12px;border:1px solid var(--rc-border);background:var(--rc-card);cursor:pointer}
+.av{width:30px;height:30px;border-radius:50%;background:var(--rc-mint);color:#0A4A3B;font-weight:700;font-size:12px;display:grid;place-items:center}
+.banner{margin-top:22px;border-radius:20px;padding:26px 28px;background:linear-gradient(120deg,#0D9274 0%,#37C7A3 60%,#7FE0C4 100%);color:#04251D;display:flex;justify-content:space-between;align-items:center;gap:20px;overflow:hidden;position:relative}
+.banner h2{font-size:26px;letter-spacing:-.02em}
+.banner p{margin-top:6px;font-size:14px;max-width:46ch;color:#0A3A2E}
+.banner .acts{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.pill{height:44px;padding:0 18px;border-radius:12px;border:0;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.pill.dark{background:#0F1716;color:#E8F3EE}
+.pill.ghost{background:rgba(255,255,255,.35);color:#04251D}
+.banner svg.deco{width:180px;height:120px;flex:none;opacity:.9}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:18px}
+.card{background:var(--rc-card);border:1px solid var(--rc-border);border-radius:var(--rc-radius);padding:18px}
+.kpi .h{display:flex;align-items:center;gap:10px;color:var(--rc-text-dim);font-size:13px}
+.kpi .ic{width:34px;height:34px;border-radius:10px;background:rgba(13,146,116,.18);color:var(--rc-mint);display:grid;place-items:center}
+.kpi .v{display:flex;align-items:flex-end;justify-content:space-between;margin-top:14px}
+.kpi .n{font-size:30px;font-weight:700;letter-spacing:-.02em}
+.kpi .d{font-size:12px;color:var(--rc-text-dim);margin-top:2px}
+.kpi svg.spark{width:84px;height:34px}
+.cols{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-top:16px}
+.cols2{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-top:16px}
+.card h3{font-size:15px}
+.card .cap{font-size:12px;color:var(--rc-text-dim);margin-top:2px}
+.link{white-space:nowrap}
+.sel{color:var(--rc-text);height:34px;border-radius:10px;border:1px solid var(--rc-border);background:var(--rc-card-2);padding:0 10px;font-size:13px}
+.chead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--rc-text-dim)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+th{text-align:left;font-weight:600;color:var(--rc-text-dim);font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:8px 8px}
+td{padding:12px 8px;border-top:1px solid var(--rc-border)}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px}
+.tag.od{background:rgba(242,184,75,.14);color:var(--rc-warn)}
+.tag.due{background:rgba(127,180,245,.14);color:var(--rc-info)}
+.tag.inc{background:rgba(201,241,226,.12);color:var(--rc-mint)}
+.tag.rev{background:rgba(74,222,158,.12);color:var(--rc-ok)}
+.donutwrap{display:flex;align-items:center;gap:18px;margin-top:10px;flex-wrap:wrap}
+.model{display:flex;gap:12px;margin-top:12px;padding:12px;border-radius:12px;background:var(--rc-card-2);font-size:13px;color:var(--rc-text-dim);line-height:1.5}
+.model b{color:var(--rc-text)}
+.foot{margin-top:18px;font-size:12px;color:var(--rc-text-dim)}
+.bottomnav{display:none}
+
+@media (max-width:1080px){
+  .grid4{grid-template-columns:repeat(2,1fr)} .cols,.cols2{grid-template-columns:1fr}
+  #app{grid-template-columns:76px 1fr} #app .lbl,#app aside .logo span.t,#app .nav-h{display:none}
+}
+@media (max-width:760px){
+  #login{grid-template-columns:1fr} .l-left{display:none}
+  #app{grid-template-columns:1fr} aside{display:none}
+  main{padding:16px 14px 96px} .banner svg.deco{display:none} .banner h2{font-size:22px}
+  .top .search{order:5;width:100%} .profile .nm{display:none}
+  .bottomnav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;background:var(--rc-card);border-top:1px solid var(--rc-border);padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:5}
+  .bottomnav button{display:flex;flex-direction:column;align-items:center;gap:3px;min-height:56px;border:0;background:none;color:var(--rc-text-dim);font-size:11px;cursor:pointer;border-radius:12px}
+  .bottomnav button[aria-current=page]{color:var(--rc-mint);background:rgba(13,146,116,.2)}
+  th:nth-child(3),td:nth-child(3){display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<section id="login" aria-label="Sign in">
+  <div class="l-left">
+    <svg class="art" viewBox="0 0 440 400" role="img" aria-label="Illustration of a community health worker holding a tablet">
+      <circle cx="220" cy="190" r="165" fill="none" stroke="#7CC9AE" stroke-width="1.5" stroke-dasharray="3 7"/>
+      <circle cx="220" cy="205" r="120" fill="#A9E3CC" opacity=".55"/>
+      <!-- body -->
+      <path d="M130 372c0-62 38-100 90-100s90 38 90 100z" fill="#fff" stroke="#0A4A3B" stroke-width="2.5"/>
+      <path d="M192 274l28 54 28-54" fill="#14A98A" stroke="#0A4A3B" stroke-width="2.5"/>
+      <!-- head + scarf -->
+      <circle cx="220" cy="196" r="38" fill="#C98E5E" stroke="#0A4A3B" stroke-width="2.5"/>
+      <path d="M176 200c-4-44 22-70 46-70s52 24 46 70c-8-22-18-34-46-34s-38 12-46 34z" fill="#14A98A" stroke="#0A4A3B" stroke-width="2.5"/>
+      <circle cx="207" cy="198" r="3" fill="#0A4A3B"/><circle cx="233" cy="198" r="3" fill="#0A4A3B"/>
+      <path d="M210 213q10 8 20 0" fill="none" stroke="#0A4A3B" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- tablet -->
+      <g transform="rotate(-12 190 318)"><rect x="140" y="288" width="96" height="66" rx="8" fill="#2F6F60" stroke="#0A4A3B" stroke-width="2.5"/>
+      <rect x="148" y="296" width="80" height="50" rx="4" fill="#C9F1E2"/><path d="M154 330l14-10 12 6 14-14 14 8 12-10" fill="none" stroke="#0D9274" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <!-- cross + leaf accents -->
+      <circle cx="338" cy="262" r="22" fill="#fff" stroke="#0A4A3B" stroke-width="2.5"/><path d="M338 251v22M327 262h22" stroke="#0D9274" stroke-width="6" stroke-linecap="round"/>
+      <path d="M96 150c24-8 40 4 44 26-24 8-40-4-44-26z" fill="#14A98A" stroke="#0A4A3B" stroke-width="2.5"/><path d="M100 168c10-4 22-6 34 0" stroke="#0A4A3B" stroke-width="2" fill="none"/>
+      <circle cx="320" cy="110" r="7" fill="#14A98A"/><circle cx="108" cy="276" r="6" fill="#7CC9AE"/>
+    </svg>
+    <div><h2>Welcome back</h2><p>Screening, follow-ups and community insights, built for health workers in the field.</p></div>
+  </div>
+  <div class="l-right">
+    <div class="l-card">
+      <div class="logo"><span class="mark"><svg class="i" viewBox="0 0 24 24"><path d="M12 21s-7-4.4-9-9.2C1.6 8 3.8 5 7 5c2 0 3.6 1.2 5 3 1.4-1.8 3-3 5-3 3.200 0 5.400 3 4 6.800C19 16.600 12 21 12 21z"/></svg></span>RuralCare AI</div>
+
+      <form id="loginForm" novalidate>
+        <h1>Sign in to your account</h1>
+        <p class="l-sub">Don't have an account? <a href="#" id="toSignup">Sign up for free</a></p>
+        <div class="field"><label for="email">Email address</label>
+          <div class="inp"><svg class="i lead" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          <input id="email" type="email" autocomplete="username" placeholder="you@example.com" aria-describedby="emailErr"></div>
+          <div class="err" id="emailErr" role="alert" hidden></div></div>
+        <div class="field"><label for="pw">Password</label>
+          <div class="inp"><svg class="i lead" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+          <input id="pw" type="password" autocomplete="current-password" placeholder="Your password" aria-describedby="pwErr">
+          <button type="button" class="tail" id="showPw" aria-label="Show password" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.500-7 10-7 10 7 10 7-3.500 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+          <div class="err" id="pwErr" role="alert" hidden></div></div>
+        <div class="row"><label><input type="checkbox"> Remember me</label><button type="button" class="link" id="toForgot">Forgot password?</button></div>
+        <button class="btn" id="signBtn" type="submit"><span id="signTxt">Sign in</span></button>
+        <div class="note"><svg class="i" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.500 8 8 9 4.500-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg><span>Secure access for authorised community health staff. Educational research prototype: do not enter real patient data.</span></div>
+      </form>
+
+      <form id="forgotForm" hidden novalidate>
+        <h1>Reset your password</h1>
+        <p class="l-sub">Enter your email and we'll send reset instructions.</p>
+        <div class="field"><label for="fEmail">Email address</label>
+          <div class="inp"><svg class="i lead" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><input id="fEmail" type="email" placeholder="you@example.com"></div>
+          <div class="err" id="fErr" role="alert" hidden></div></div>
+        <button class="btn" type="submit">Send reset link</button>
+        <div class="ok" id="fOk" role="status" hidden>If that email is registered, a reset link is on its way.</div>
+        <button type="button" class="link back" id="backLogin">← Back to sign in</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DASHBOARD ============ -->
+<div id="app" hidden>
+  <aside aria-label="Main navigation">
+    <div class="logo"><span class="mark" style="width:30px;height:30px;border-radius:9px;background:var(--rc-primary);display:grid;place-items:center;color:#fff"><svg class="i" viewBox="0 0 24 24"><path d="M12 21s-7-4.4-9-9.2C1.6 8 3.8 5 7 5c2 0 3.600 1.200 5 3 1.400-1.800 3-3 5-3 3.200 0 5.400 3 4 6.800C19 16.600 12 21 12 21z"/></svg></span><span class="t">RuralCare AI</span></div>
+    <div class="nav-h">Overview</div>
+    <button class="nav" aria-current="page"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span class="lbl">Dashboard</span></button>
+    <button class="nav"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5.500-5-6.500"/></svg><span class="lbl">Participants</span></button>
+    <button class="nav"><svg class="i" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span class="lbl">Screenings</span></button>
+    <div class="nav-h">Care</div>
+    <button class="nav"><svg class="i" viewBox="0 0 24 24"><path d="M4 21c0-9 5-15 16-16-1 11-7 16-16 16zM4 21c3-5 6-8 10-10"/></svg><span class="lbl">Nutrition</span></button>
+    <button class="nav"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg><span class="lbl">Follow-ups</span></button>
+    <div class="nav-h">Insights</div>
+    <button class="nav"><svg class="i" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="lbl">Analytics</span></button>
+    <button class="nav"><svg class="i" viewBox="0 0 24 24"><path d="M9 3h6v5l4 9a3 3 0 0 1-3 4H8a3 3 0 0 1-3-4l4-9z"/><path d="M8 14h8"/></svg><span class="lbl">Research lab</span></button>
+    <div class="side-foot">
+      <button class="nav"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.200l2-1.500-2-3.400-2.300 1a7 7 0 0 0-2-1.200L14.300 3h-4l-.3 2.700a7 7 0 0 0-2 1.200l-2.300-1-2 3.400 2 1.500a7 7 0 0 0 0 2.400l-2 1.500 2 3.400 2.300-1a7 7 0 0 0 2 1.200l.3 2.700h4l.3-2.700a7 7 0 0 0 2-1.200l2.300 1 2-3.400-2-1.500c.1-.4.100-.8.100-1.200z"/></svg><span class="lbl">Settings</span></button>
+      <button class="nav" id="collapse"><svg class="i" viewBox="0 0 24 24"><path d="m11 17-5-5 5-5M18 17l-5-5 5-5"/></svg><span class="lbl">Collapse</span></button>
+    </div>
+  </aside>
+
+  <main>
+    <header class="top">
+      <div><h1 id="greet">Good morning</h1><div class="sub">Community health overview · Sample area</div></div>
+      <span class="badge demo" title="Every number on this page is sample data for the design preview">Demo data</span>
+      <div class="sp"></div>
+      <div class="search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.300-4.300"/></svg><label class="sr" for="q">Search participants or records</label><input id="q" type="search" placeholder="Search participant ID or report"></div>
+      <button class="iconbtn" aria-label="Notifications"><svg class="i" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 21a2 2 0 0 0 4 0"/></svg></button>
+      <button class="profile" aria-label="Open profile menu"><span class="av">HW</span><span class="nm" style="font-size:13px">Health worker</span></button>
+    </header>
+
+    <section class="banner" aria-label="Welcome">
+      <div>
+        <h2>Check your community's health at a glance</h2>
+        <p>See who needs a visit next, which records are incomplete, and how screening coverage is trending.</p>
+        <div class="acts"><button class="pill dark"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New screening</button><button class="pill ghost">Register participant</button></div>
+      </div>
+      <svg class="deco" viewBox="0 0 180 120" aria-hidden="true"><circle cx="120" cy="60" r="52" fill="rgba(255,255,255,.25)"/><circle cx="120" cy="60" r="34" fill="rgba(255,255,255,.3)"/><path d="M120 40v40M100 60h40" stroke="#04251D" stroke-width="9" stroke-linecap="round"/><path d="M8 100c20-30 40 10 60-18s30-20 40-32" fill="none" stroke="#04251D" stroke-width="3" stroke-linecap="round" opacity=".5"/></svg>
+    </section>
+
+    <section class="grid4" aria-label="Key numbers" id="kpis"></section>
+
+    <section class="cols">
+      <div class="card">
+        <div class="chead"><div><h3>Screening activity</h3><div class="cap">Completed screenings per day</div></div>
+          <label class="sr" for="range">Date range</label><select class="sel" id="range"><option>This week</option><option>Last 30 days</option></select></div>
+        <div id="bars" role="img" aria-label="Bar chart of screenings per day"></div>
+        <div class="legend"><span><i style="background:var(--rc-primary)"></i>Completed</span><span><i style="background:#2B3E38"></i>Planned (not yet done)</span></div>
+      </div>
+      <div class="card">
+        <h3>Follow-up status</h3><div class="cap">Share of scheduled visits</div>
+        <div class="donutwrap"><div id="donut"></div>
+          <ul class="legend" style="flex-direction:column;list-style:none;padding:0" id="dleg"></ul></div>
+      </div>
+    </section>
+
+    <section class="cols2">
+      <div class="card">
+        <div class="chead"><div><h3>Follow-up queue</h3><div class="cap">Sorted by simple, visible rules, not a prediction</div></div><button class="link" style="color:var(--rc-mint)">View all</button></div>
+        <table><thead><tr><th>Participant</th><th>Reason</th><th>Area</th><th>Status</th></tr></thead><tbody id="queue"></tbody></table>
+      </div>
+      <div class="card">
+        <h3>Research model status</h3><div class="cap">Honest availability and validation</div>
+        <div class="model"><svg class="i" viewBox="0 0 24 24" style="color:var(--rc-warn)"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.500v.01"/></svg>
+          <div><b>Research model not yet validated</b><br>Trained on synthetic data only. Scores are for classroom demonstration and are never a diagnosis or a probability of disease.</div></div>
+        <table><tbody>
+          <tr><td>Model version</td><td style="text-align:right">demo-0.1</td></tr>
+          <tr><td>Dataset source</td><td style="text-align:right">Synthetic</td></tr>
+          <tr><td>Validation</td><td style="text-align:right">Not validated</td></tr></tbody></table>
+        <button class="pill ghost" style="margin-top:14px;background:var(--rc-card-2);color:var(--rc-text);width:100%;justify-content:center">Open research lab</button>
+      </div>
+    </section>
+    <p class="foot">RuralCare AI is an educational research prototype, not a medical device. Replace sample values with API data in the React app.</p>
+  </main>
+
+  <nav class="bottomnav" aria-label="Mobile navigation">
+    <button aria-current="page"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Home</button>
+    <button><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7"/></svg>People</button>
+    <button><svg class="i" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Screen</button>
+    <button><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Visits</button>
+    <button><svg class="i" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Insights</button>
+  </nav>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const show=(el,on)=>el.hidden=!on;
+
+/* ---- login ---- */
+const emailRe=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function err(id,input,msg){const e=$(id);e.textContent=msg;show(e,!!msg);input.setAttribute('aria-invalid',msg?'true':'false')}
+$('#showPw').onclick=e=>{const p=$('#pw'),on=p.type==='password';p.type=on?'text':'password';e.currentTarget.setAttribute('aria-pressed',on);e.currentTarget.setAttribute('aria-label',on?'Hide password':'Show password')};
+$('#loginForm').onsubmit=e=>{e.preventDefault();
+  const em=$('#email'),pw=$('#pw');let bad=false;
+  if(!emailRe.test(em.value.trim())){err('#emailErr',em,'Enter a valid email address.');bad=true}else err('#emailErr',em,'');
+  if(pw.value.length<10){err('#pwErr',pw,'Password must be at least 10 characters.');bad=true}else err('#pwErr',pw,'');
+  if(bad)return;
+  const b=$('#signBtn');b.disabled=true;b.innerHTML='<span class="spin" aria-hidden="true"></span><span>Signing in…</span>';
+  /* PREVIEW ONLY: in the React app call the existing login API here. */
+  setTimeout(()=>{show($('#login'),false);show($('#app'),true);window.scrollTo(0,0)},700)};
+$('#toForgot').onclick=()=>{show($('#loginForm'),false);show($('#forgotForm'),true);$('#fEmail').focus()};
+$('#backLogin').onclick=()=>{show($('#forgotForm'),false);show($('#loginForm'),true)};
+$('#toSignup').onclick=e=>e.preventDefault();
+$('#forgotForm').onsubmit=e=>{e.preventDefault();const i=$('#fEmail');
+  if(!emailRe.test(i.value.trim())){err('#fErr',i,'Enter a valid email address.');show($('#fOk'),false);return}
+  err('#fErr',i,'');show($('#fOk'),true)};
+
+/* ---- dashboard (sample data) ---- */
+const h=new Date().getHours();$('#greet').textContent=(h<12?'Good morning':h<17?'Good afternoon':'Good evening')+', health worker';
+$('#collapse').onclick=()=>$('#app').classList.toggle('collapsed');
+const ic={users:'<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7"/>',pulse:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/>',doc:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>'};
+const kpis=[['Participants','Registered in this area',128,'users',[4,6,5,8,9,11,12],'+6 this week'],
+ ['Screenings','Completed this week',123,'pulse',[9,14,11,18,15,22,19],'+12 vs last week'],
+ ['Follow-ups due','Visits needing attention',17,'cal',[3,5,4,6,5,7,6],'5 overdue'],
+ ['Incomplete records','Measurements to complete',9,'doc',[2,3,3,4,3,2,3],'Missing BP or glucose']];
+function spark(a){const w=84,hh=34,m=Math.max(...a),n=Math.min(...a);const p=a.map((v,i)=>`${(i/(a.length-1))*w},${hh-3-((v-n)/(m-n||1))*(hh-8)}`).join(' ');return `<svg class="spark" viewBox="0 0 ${w} ${hh}" aria-hidden="true"><polyline points="${p}" fill="none" stroke="#4ADE9E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
+$('#kpis').innerHTML=kpis.map(k=>`<article class="card kpi"><div class="h"><span class="ic"><svg class="i" viewBox="0 0 24 24">${ic[k[3]]}</svg></span>${k[0]}</div><div class="v"><div><div class="n">${k[2]}</div><div class="d">${k[1]}</div></div>${spark(k[4])}</div><div class="d" style="margin-top:10px">${k[5]}</div></article>`).join('');
+
+const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],done=[14,22,18,27,21,9,12],plan=[18,24,22,30,26,14,14];
+(function(){const W=560,H=230,pl=30,pb=26,mx=32,bw=22,gap=(W-pl)/7;let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="margin-top:10px">`;
+ [0,10,20,30].forEach(v=>{const y=H-pb-(v/mx)*(H-pb-10);s+=`<line x1="${pl}" x2="${W}" y1="${y}" y2="${y}" stroke="rgba(201,241,226,.08)"/><text x="0" y="${y+4}" fill="#9DB5AC" font-size="11">${v}</text>`});
+ days.forEach((d,i)=>{const x=pl+i*gap+gap/2,hp=(plan[i]/mx)*(H-pb-10),hd=(done[i]/mx)*(H-pb-10);
+  s+=`<rect x="${x-bw-2}" y="${H-pb-hp}" width="${bw}" height="${hp}" rx="6" fill="#2B3E38"/><rect x="${x+2}" y="${H-pb-hd}" width="${bw}" height="${hd}" rx="6" fill="#0D9274"/><text x="${x}" y="${H-6}" text-anchor="middle" fill="#9DB5AC" font-size="12">${d}</text>`});
+ $('#bars').innerHTML=s+'</svg>'})();
+
+const seg=[['Completed',62,'#0D9274'],['Due soon',24,'#7FB4F5'],['Overdue',14,'#F2B84B']];
+(function(){const r=54,c=2*Math.PI*r;let off=0,s=`<svg viewBox="0 0 140 140" width="140" height="140" role="img" aria-label="Follow-up status: 62 percent completed, 24 percent due soon, 14 percent overdue"><circle cx="70" cy="70" r="${r}" fill="none" stroke="#202C28" stroke-width="16"/>`;
+ seg.forEach(g=>{const l=c*g[1]/100;s+=`<circle cx="70" cy="70" r="${r}" fill="none" stroke="${g[2]}" stroke-width="16" stroke-dasharray="${l-3} ${c-l+3}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)"/>`;off+=l});
+ s+=`<text x="70" y="68" text-anchor="middle" fill="#E8F3EE" font-size="22" font-weight="700">62%</text><text x="70" y="86" text-anchor="middle" fill="#9DB5AC" font-size="11">completed</text></svg>`;
+ $('#donut').innerHTML=s;$('#dleg').innerHTML=seg.map(g=>`<li><i style="background:${g[2]}"></i>${g[0]} · ${g[1]}%</li>`).join('')})();
+
+const q=[['P-0412','Visit overdue by 6 days','Ward 2','od','Overdue'],['P-0388','Blood pressure not recorded','Ward 5','inc','Incomplete'],['P-0275','Scheduled follow-up tomorrow','Ward 1','due','Due soon'],['P-0431','Flagged for professional review','Ward 3','rev','Needs review'],['P-0190','Glucose not recorded','Ward 2','inc','Incomplete']];
+$('#queue').innerHTML=q.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td><span class="tag ${r[3]}">${r[4]}</span></td></tr>`).join('');
+</script>
+</body>
+</html>

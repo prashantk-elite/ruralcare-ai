@@ -1,0 +1,39 @@
+/* RuralCare AI design tokens — drop into frontend/src/styles/ and import once in main.tsx */
+:root {
+  /* Dark dashboard (Theme A) */
+  --rc-bg: #0F1716;
+  --rc-card: #172521;
+  --rc-card-2: #202C28;
+  --rc-border: rgba(201, 241, 226, 0.10);
+  --rc-text: #E8F3EE;
+  --rc-text-dim: #9DB5AC;
+
+  /* Brand */
+  --rc-primary: #0D9274;
+  --rc-primary-hover: #0B7F65;
+  --rc-mint: #C9F1E2;
+  --rc-mint-soft: #E3F7EF;
+
+  /* Light pages (Theme B) */
+  --rc-light-bg: #F6F9F7;
+  --rc-light-text: #0F1716;
+  --rc-light-dim: #50655E;
+
+  /* Status (always paired with a text label, never colour alone) */
+  --rc-ok: #4ADE9E;
+  --rc-warn: #F2B84B;
+  --rc-info: #7FB4F5;
+
+  /* Shape, spacing, motion */
+  --rc-radius: 16px;
+  --rc-radius-sm: 10px;
+  --rc-space-1: 4px; --rc-space-2: 8px; --rc-space-3: 12px;
+  --rc-space-4: 16px; --rc-space-5: 24px; --rc-space-6: 32px;
+  --rc-ease: 180ms ease;
+  --rc-font: "Inter", "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --rc-ease: 0ms; }
+  * { animation: none !important; transition: none !important; }
+}
