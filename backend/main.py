@@ -81,6 +81,11 @@ def user(authorization: Optional[str] = Header(None)):
         d = json.loads(base64.urlsafe_b64decode(p))
         if d["exp"] < time.time():
             raise ValueError
+        c = db()
+        r = c.execute("SELECT status FROM users WHERE id=?", (d["uid"],)).fetchone()
+        c.close()
+        if not r or (r["status"] or "active") == "suspended":
+            raise ValueError
         return d
     except Exception:
         raise HTTPException(401, "Not authenticated")
@@ -106,6 +111,8 @@ def login(b: Login):
     c.close()
     if not r or not check_pw(b.password, r["pw"]):
         raise HTTPException(401, "Incorrect email or password")
+    if (r["status"] or "active") == "suspended":
+        raise HTTPException(403, "Account suspended")
     return {"token": make_token(r["id"], r["role"]), "role": r["role"]}
 
 
@@ -366,3 +373,122 @@ def participant_profile(pid: int, u=Depends(need("worker"))):
     audit(u["uid"], "view", "participant", pid)
     return {"participant": dict(p), "consents": [dict(r) for r in consents],
             "screenings": [dict(r) for r in screenings], "followups": [dict(r) for r in fups]}
+
+
+@app.get("/api/health")
+def health():
+    """Real checks only: database connectivity and presence of model files."""
+    try:
+        c = db()
+        c.execute("SELECT 1")
+        c.close()
+        dbs = "ok"
+    except Exception:
+        dbs = "error"
+    return {"api": "ok", "database": dbs,
+            "model_files_present": (MODEL_DIR / "model.joblib").exists() and (MODEL_DIR / "metrics.json").exists(),
+            "checked_at": time.time()}
+
+
+@app.get("/api/admin/users")
+def admin_users(u=Depends(need("admin"))):
+    c = db()
+    rows = c.execute("SELECT id,email,role,status FROM users ORDER BY id").fetchall()
+    c.close()
+    audit(u["uid"], "list", "users")
+    return [dict(r) for r in rows]
+
+
+# ---- Admin user management, nutrition feedback and nutrition analytics ----
+def init_extra():
+    c = db()
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'")
+    except sqlite3.OperationalError:
+        pass
+    c.execute("""CREATE TABLE IF NOT EXISTS nutrition_feedback(id INTEGER PRIMARY KEY, worker_id INTEGER, diet TEXT,
+        budget_tier INTEGER, satisfaction INTEGER, adherence TEXT, accessibility TEXT, created_at REAL)""")
+    c.commit()
+    c.close()
+
+
+init_extra()
+
+
+class NewUser(BaseModel):
+    email: str = Field(min_length=5, max_length=120)
+    role: Literal["worker", "researcher", "admin"]
+    password: str = Field(min_length=10, max_length=100)
+
+
+@app.post("/api/admin/users", status_code=201)
+def create_user(b: NewUser, u=Depends(need("admin"))):
+    c = db()
+    try:
+        cur = c.execute("INSERT INTO users(email,pw,role,status) VALUES(?,?,?,'active')", (b.email.lower(), hash_pw(b.password), b.role))
+    except sqlite3.IntegrityError:
+        c.close()
+        raise HTTPException(409, "Email already registered")
+    c.commit()
+    c.close()
+    audit(u["uid"], "create", "user", cur.lastrowid)
+    return {"id": cur.lastrowid}
+
+
+class UserChange(BaseModel):
+    role: Optional[Literal["worker", "researcher", "admin"]] = None
+    status: Optional[Literal["active", "suspended"]] = None
+
+
+@app.patch("/api/admin/users/{uid}")
+def change_user(uid: int, b: UserChange, u=Depends(need("admin"))):
+    if uid == u["uid"]:
+        raise HTTPException(400, "You cannot change your own role or status")
+    if b.role is None and b.status is None:
+        raise HTTPException(422, "Nothing to change")
+    c = db()
+    if not c.execute("SELECT 1 FROM users WHERE id=?", (uid,)).fetchone():
+        c.close()
+        raise HTTPException(404, "User not found")
+    if b.role:
+        c.execute("UPDATE users SET role=? WHERE id=?", (b.role, uid))
+    if b.status:
+        c.execute("UPDATE users SET status=? WHERE id=?", (b.status, uid))
+    c.commit()
+    c.close()
+    audit(u["uid"], "update", "user", uid)
+    return {"updated": True}
+
+
+class Feedback(BaseModel):
+    diet: Literal["veg", "egg", "non"]
+    budget_tier: int = Field(ge=1, le=3)
+    satisfaction: int = Field(ge=1, le=5)
+    adherence: Literal["none", "some", "most", "all"]
+    accessibility: Literal["easy", "some_difficulty", "hard"]
+
+
+@app.post("/api/nutrition/feedback", status_code=201)
+def add_feedback(b: Feedback, u=Depends(need("worker"))):
+    """Anonymous, self-reported feedback. Not linked to a participant, and not verified consumption."""
+    c = db()
+    c.execute("INSERT INTO nutrition_feedback(worker_id,diet,budget_tier,satisfaction,adherence,accessibility,created_at) VALUES(?,?,?,?,?,?,?)",
+              (u["uid"], b.diet, b.budget_tier, b.satisfaction, b.adherence, b.accessibility, time.time()))
+    c.commit()
+    c.close()
+    return {"saved": True}
+
+
+@app.get("/api/analytics/nutrition")
+def nutrition_analytics(u=Depends(need("admin", "researcher", "worker"))):
+    c = db()
+    total = c.execute("SELECT COUNT(*) n FROM nutrition_feedback").fetchone()["n"]
+    ok = total >= MIN_GROUP
+    out = {"enough_data": ok, "total": total if ok else None, "min_group_size": MIN_GROUP,
+           "by_adherence": [], "by_accessibility": [], "by_satisfaction": [], "by_diet": []}
+    if ok:
+        for key, col in [("by_adherence", "adherence"), ("by_accessibility", "accessibility"), ("by_satisfaction", "satisfaction"), ("by_diet", "diet")]:
+            rows = c.execute(f"SELECT {col} k, COUNT(*) n FROM nutrition_feedback GROUP BY {col}").fetchall()
+            out[key] = [{"group": str(r["k"]), "count": r["n"] if r["n"] >= MIN_GROUP else None, "suppressed": r["n"] < MIN_GROUP} for r in rows]
+    c.close()
+    return out

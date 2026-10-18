@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { api } from "./api";
+import { FeedbackCard } from "./pages5";
 
 const when = (t: number) => new Date(t * 1000).toLocaleDateString();
 export function Profile() {
@@ -41,5 +42,5 @@ export function Nutrition2() {
     {plan && <><div role="tablist" className="noprint" style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>{[0, 1, 2, 3, 4, 5, 6].map(i => <button key={i} role="tab" aria-selected={day === i} className={day === i ? "btn sm" : "btn sec sm"} onClick={() => setDay(i)}>Day {i + 1}</button>)}</div>
       <div className="kpis"><div className="card kpi"><b>{items.length}</b><span>Foods suggested today</span></div><div className="card kpi"><b>{groups.length}</b><span>Food groups: {groups.join(", ") || "none"}</span></div><div className="card kpi"><b style={{ fontSize: 18 }}>{al.length ? al.join(", ") : "None selected"}</b><span>Allergies checked</span></div><div className="card kpi"><b style={{ fontSize: 18 }}>Unavailable</b><span>Nutrient data source</span></div></div>
       <div className="row">{plan.plan.map((m: any) => <div className="card" key={m.meal}><h2>{m.meal}</h2>{m.items.map((i: any, k: number) => <div key={k} style={{ borderTop: k ? "1px solid var(--bd)" : 0, padding: "8px 0" }}>{i.food ? <><b>{i.food}</b><div><span className="tag">{i.group}</span><span className="tag">{TIER[i.cost_tier]}</span><span className="tag">{i.nutrient_data}</span></div><div className="muted">{i.reason}{i.alternatives.length ? `. Alternatives: ${i.alternatives.join(", ")}` : ""}</div></> : <span className="muted">{i.note}</span>}</div>)}</div>)}</div>
-      <div className="card"><h2>Why these foods?</h2><ul><li>Dietary preference and allergy filters are applied first.</li><li>Only foods marked available and within the chosen cost tier are used.</li><li>Foods are ranked for variety across meals and days.</li><li>Cost is a relative tier, not a price, and nutrient values are shown only when a verified source exists.</li></ul><p className="muted">{plan.disclaimer}</p></div></>}</>;
+      <div className="card"><h2>Why these foods?</h2><ul><li>Dietary preference and allergy filters are applied first.</li><li>Only foods marked available and within the chosen cost tier are used.</li><li>Foods are ranked for variety across meals and days.</li><li>Cost is a relative tier, not a price, and nutrient values are shown only when a verified source exists.</li></ul><p className="muted">{plan.disclaimer}</p></div><FeedbackCard diet={diet} budget={budget} /></>}</>;
 }

@@ -51,3 +51,16 @@ npm run build                                                          # type-ch
 ```
 Deploy `frontend/` to Vercel; set `VITE_API_URL` to the Render API URL and add the Vercel URL to `CORS_ORIGINS`.
 Optional: `cd ml && python extras.py --data diabetes.csv` (small neural network; add `pip install shap` for SHAP).
+
+## Documentation
+`docs/ARCHITECTURE.md` (architecture + ER diagrams), `docs/ML_METHODOLOGY.md`, `docs/ETHICS_AND_LIMITATIONS.md`.
+
+## Current feature list
+Landing page, role-based login, dashboard with privacy-suppressed charts, participant registry and profile (consent withdrawal, deletion),
+3-step screening wizard, research assessment (labelled unvalidated unless trained on a real dataset), 7-day nutrition planner with allergy/diet/
+budget filters, anonymous nutrition feedback and insights, follow-ups with calendar/agenda/list, Research Lab (evaluation, importance, comparison, report),
+admin (health checks, users with role change and suspend, model versions, privacy), help, notifications, English/Hindi (labels and headings).
+
+## Known gaps
+SQLite (not PostgreSQL), minimal token authentication, no password-reset flow, no AI-backed chatbot, Hindi covers labels not long text,
+no verified food-composition or price data yet, no model trained on real data until you run `ml/train.py` with the dataset.

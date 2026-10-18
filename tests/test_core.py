@@ -65,3 +65,32 @@ def test_day_rotation_keeps_allergy_filter():
     for d in range(7):
         foods = {i["food"] for m in recommend(diet="non", budget=3, allergies=["peanut", "egg"], day=d)["plan"] for i in m["items"]}
         assert not foods & {"Roasted peanuts", "Egg"}
+
+def test_health_is_real_and_public():
+    r = c.get("/api/health").json()
+    assert r["api"] == "ok" and r["database"] == "ok"
+def test_admin_users_restricted_and_no_passwords():
+    assert c.get("/api/admin/users", headers=tok("worker@demo.local")).status_code == 403
+    rows = c.get("/api/admin/users", headers=tok("admin@demo.local")).json()
+    assert rows and all("pw" not in r and "password" not in r for r in rows)
+
+def test_admin_creates_changes_and_suspends_user():
+    a = tok("admin@demo.local")
+    r = c.post("/api/admin/users", headers=a, json={"email": "new@demo.local", "role": "worker", "password": "long-enough-pw"})
+    assert r.status_code == 201 and c.post("/api/admin/users", headers=a, json={"email": "new@demo.local", "role": "worker", "password": "long-enough-pw"}).status_code == 409
+    uid = r.json()["id"]
+    assert c.post("/api/admin/users", headers=a, json={"email": "x@demo.local", "role": "worker", "password": "short"}).status_code == 422
+    assert c.patch(f"/api/admin/users/{uid}", headers=a, json={"status": "suspended"}).status_code == 200
+    assert c.post("/api/auth/login", json={"email": "new@demo.local", "password": "long-enough-pw"}).status_code == 403
+def test_admin_cannot_change_self_and_worker_cannot_manage_users():
+    a = tok("admin@demo.local"); me = c.get("/api/auth/me", headers=a).json()["uid"]
+    assert c.patch(f"/api/admin/users/{me}", headers=a, json={"role": "worker"}).status_code == 400
+    assert c.patch("/api/admin/users/1", headers=tok("worker@demo.local"), json={"status": "suspended"}).status_code == 403
+def test_nutrition_feedback_validation_and_suppression():
+    h = tok("worker@demo.local")
+    assert c.post("/api/nutrition/feedback", headers=h, json={"diet": "veg", "budget_tier": 2, "satisfaction": 9, "adherence": "some", "accessibility": "easy"}).status_code == 422
+    assert c.get("/api/analytics/nutrition", headers=h).json()["enough_data"] is False
+    for _ in range(5):
+        assert c.post("/api/nutrition/feedback", headers=h, json={"diet": "veg", "budget_tier": 2, "satisfaction": 4, "adherence": "some", "accessibility": "easy"}).status_code == 201
+    out = c.get("/api/analytics/nutrition", headers=tok("researcher@demo.local")).json()
+    assert out["enough_data"] and out["total"] == 5

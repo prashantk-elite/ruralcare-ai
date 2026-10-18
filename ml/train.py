@@ -34,6 +34,9 @@ def synthetic(n=800):
 
 def load(path):
     d = pd.read_csv(path)
+    miss = [c for c in FEATURES + [TARGET] if c not in d.columns]
+    if miss:
+        raise SystemExit(f"CSV is missing columns {miss}. Found: {list(d.columns)}. Expected Pima-style names: {FEATURES + [TARGET]}")
     for c in ["Glucose", "BloodPressure", "BMI"]:   # in the Pima data a 0 means "not measured", not a real value
         d.loc[d[c] == 0, c] = np.nan
     return d[FEATURES + [TARGET]]
