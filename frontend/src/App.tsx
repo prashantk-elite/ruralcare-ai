@@ -7,6 +7,7 @@ import { Profile, Nutrition2 } from "./pages3";
 import { AdminPage } from "./pages4";
 import { Followups2, NutritionInsights, PublicHome } from "./pages5";
 import { useAutoTranslate } from "./i18n";
+import { ThemeButton } from "./theme";
 
 const MENU: Record<string, [string, string][]> = {
   worker: [["/", "Dashboard"], ["/participants", "Participants"], ["/screening", "Screening"], ["/nutrition", "Nutrition"], ["/followups", "Follow-ups"], ["/nutrition-insights", "Nutrition insights"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
@@ -33,7 +34,7 @@ function Login({ onLogin }: { onLogin: (role: string) => void }) {
     try { if (mode === "up") await api("/api/auth/register", { method: "POST", body: JSON.stringify({ email, password: pw }) });
       const r = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password: pw }) }); setToken(r.token); onLogin(r.role); }
     catch (x: any) { setErr(x.message); } finally { setBusy(false); } };
-  return <main style={{ maxWidth: 440 }}><div className="card"><h1>RuralCare AI</h1>
+  return <main style={{ maxWidth: 440 }}><div className="card"><div style={{ float: "right" }}><ThemeButton /></div><h1>RuralCare AI</h1>
     <div className="note">Academic research prototype. Not a diagnostic device. Do not enter real health information.</div>
     <div role="tablist" style={{ display: "flex", gap: 6 }}><button role="tab" aria-selected={mode === "in"} className={mode === "in" ? "btn sm" : "btn sec sm"} onClick={() => { setMode("in"); setErr(""); }}>Sign in</button><button role="tab" aria-selected={mode === "up"} className={mode === "up" ? "btn sm" : "btn sec sm"} onClick={() => { setMode("up"); setErr(""); }}>Create account</button></div>
     <form onSubmit={submit}><label htmlFor="e">Email</label><input id="e" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} />
