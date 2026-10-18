@@ -2,11 +2,12 @@ import { useState, useEffect, FormEvent } from "react";
 import { Routes, Route, NavLink, Navigate } from "react-router-dom";
 import { api, setToken } from "./api";
 import { Landing, Shell, BarChart, Lang } from "./ui";
+import { Wizard, LabTabs, Help, Notifications, Settings } from "./pages2";
 
 const MENU: Record<string, [string, string][]> = {
-  worker: [["/", "Dashboard"], ["/participants", "Participants"], ["/screening", "Screening"], ["/nutrition", "Nutrition"], ["/followups", "Follow-ups"], ["/guide", "Guide"]],
-  researcher: [["/", "Dashboard"], ["/lab", "Research Lab"], ["/guide", "Guide"]],
-  admin: [["/", "Dashboard"], ["/lab", "Research Lab"], ["/audit", "Audit log"], ["/guide", "Guide"]],
+  worker: [["/", "Dashboard"], ["/participants", "Participants"], ["/screening", "Screening"], ["/nutrition", "Nutrition"], ["/followups", "Follow-ups"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
+  researcher: [["/", "Dashboard"], ["/lab", "Research Lab"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
+  admin: [["/", "Dashboard"], ["/lab", "Research Lab"], ["/audit", "Audit log"], ["/guide", "Guide"], ["/help", "Help"], ["/notifications", "Notifications"], ["/settings", "Settings"]],
 };
 
 function useLoad<T>(path: string) {
@@ -150,7 +151,7 @@ export default function App() {
   if (!role) return stage === "landing" ? <Landing lang={lang} setLang={setLang} onStart={() => setStage("login")} /> : <Login onLogin={setRole} />;
   return <Shell role={role} items={MENU[role] || MENU.worker} lang={lang} setLang={setLang} onOut={() => { setToken(""); setRole(null); setStage("landing"); }}>
     <Routes><Route path="/" element={<Dashboard role={role} />} />
-      {role === "worker" && <><Route path="/participants" element={<Participants />} /><Route path="/screening" element={<Screening />} /><Route path="/nutrition" element={<Nutrition />} /><Route path="/followups" element={<Followups />} /></>}
-      {role !== "worker" && <Route path="/lab" element={<Lab />} />}{role === "admin" && <Route path="/audit" element={<Audit />} />}
-      <Route path="/guide" element={<Guide />} /><Route path="*" element={<Navigate to="/" />} /></Routes></Shell>;
+      {role === "worker" && <><Route path="/participants" element={<Participants />} /><Route path="/screening" element={<Wizard />} /><Route path="/nutrition" element={<Nutrition />} /><Route path="/followups" element={<Followups />} /></>}
+      {role !== "worker" && <Route path="/lab" element={<LabTabs />} />}{role === "admin" && <Route path="/audit" element={<Audit />} />}
+      <Route path="/guide" element={<Guide />} /><Route path="/help" element={<Help />} /><Route path="/notifications" element={<Notifications />} /><Route path="/settings" element={<Settings role={role} />} /><Route path="*" element={<Navigate to="/" />} /></Routes></Shell>;
 }

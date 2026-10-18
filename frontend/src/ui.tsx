@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 export type Lang = "en" | "hi";
-const HI: Record<string, string> = { Dashboard: "डैशबोर्ड", Participants: "प्रतिभागी", Screening: "जांच", Nutrition: "पोषण", "Follow-ups": "फॉलो-अप", Guide: "गाइड", "Research Lab": "अनुसंधान", "Audit log": "ऑडिट लॉग" };
+const HI: Record<string, string> = { Dashboard: "डैशबोर्ड", Participants: "प्रतिभागी", Screening: "जांच", Nutrition: "पोषण", "Follow-ups": "फॉलो-अप", Guide: "गाइड", "Research Lab": "अनुसंधान", "Audit log": "ऑडिट लॉग", Help: "सहायता", Notifications: "सूचनाएं", Settings: "सेटिंग्स" };
 export const tr = (l: Lang, s: string) => (l === "hi" ? HI[s] || s : s);
 const T = {
   en: { eyebrow: "AI FOR COMMUNITY HEALTH", h: "Bringing Intelligent Health Insights Closer to Every Community.", p: "A screening and nutrition-support research platform that makes health information easier to understand and balanced food choices more practical for underserved communities.", demo: "Explore Demo", how: "How it works", note: "Academic research prototype. Not a diagnostic medical device." },
