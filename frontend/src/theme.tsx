@@ -10,11 +10,15 @@ export function applyTheme(t: Theme) {
   try { localStorage.setItem(KEY, t); } catch { /* ignore */ }
 }
 const LABEL: Record<Theme, string> = { light: "Light", dark: "Dark", system: "System" };
+const PREV: Record<Theme, string> = { light: "linear-gradient(135deg,#F5F8FA 62%,#0F766E 62%)", dark: "linear-gradient(135deg,#0E1A26 62%,#2DD4BF 62%)", system: "linear-gradient(90deg,#F5F8FA 50%,#0E1A26 50%)" };
+const DESC: Record<Theme, string> = { light: "Bright and clear", dark: "Easier in low light", system: "Match my device" };
 export function ThemePicker() {
   const [t, setT] = useState<Theme>(getTheme());
   const pick = (v: Theme) => { setT(v); applyTheme(v); };
-  return <div className="card"><h2>Appearance</h2><fieldset style={{ border: 0, padding: 0 }}><legend className="muted">Choose how the site looks</legend>
-    {(["light", "dark", "system"] as Theme[]).map(v => <label key={v} style={{ display: "inline-block", marginRight: 18, fontWeight: 400 }}><input type="radio" name="theme" checked={t === v} onChange={() => pick(v)} />{LABEL[v]}{v === "system" ? " (match my device)" : ""}</label>)}</fieldset></div>;
+  return <div className="card"><h2>Appearance</h2><p className="muted" style={{ margin: 0 }}>Choose how RuralCare AI looks on this device.</p>
+    <div role="radiogroup" aria-label="Theme" className="tiles">{(["light", "dark", "system"] as Theme[]).map(v =>
+      <button key={v} role="radio" aria-checked={t === v} className={"tile" + (t === v ? " sel" : "")} onClick={() => pick(v)}>
+        <span className="pv" style={{ background: PREV[v] }} /><b>{LABEL[v]}</b><span className="muted">{DESC[v]}</span></button>)}</div></div>;
 }
 export function ThemeButton() {
   const [t, setT] = useState<Theme>(getTheme());
