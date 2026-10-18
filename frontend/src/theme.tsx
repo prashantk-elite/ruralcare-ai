@@ -3,14 +3,14 @@ export type Theme = "light" | "dark" | "system";
 const KEY = "ruralcare-theme"; // only the theme choice is stored; never health data
 export function getTheme(): Theme {
   try { const v = localStorage.getItem(KEY); if (v === "light" || v === "dark" || v === "system") return v; } catch { /* storage unavailable */ }
-  return "light";
+  return "dark"; // default look: dark clinical dashboard
 }
 export function applyTheme(t: Theme) {
   document.documentElement.setAttribute("data-theme", t);
   try { localStorage.setItem(KEY, t); } catch { /* ignore */ }
 }
 const LABEL: Record<Theme, string> = { light: "Light", dark: "Dark", system: "System" };
-const PREV: Record<Theme, string> = { light: "linear-gradient(135deg,#F5F8FA 62%,#0F766E 62%)", dark: "linear-gradient(135deg,#0E1A26 62%,#2DD4BF 62%)", system: "linear-gradient(90deg,#F5F8FA 50%,#0E1A26 50%)" };
+const PREV: Record<Theme, string> = { light: "linear-gradient(135deg,#F6F9F7 62%,#0A7A61 62%)", dark: "linear-gradient(135deg,#0F1716 62%,#34C3A0 62%)", system: "linear-gradient(90deg,#F6F9F7 50%,#0F1716 50%)" };
 const DESC: Record<Theme, string> = { light: "Bright and clear", dark: "Easier in low light", system: "Match my device" };
 export function ThemePicker() {
   const [t, setT] = useState<Theme>(getTheme());
