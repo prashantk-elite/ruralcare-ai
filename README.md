@@ -18,8 +18,7 @@ cd ../backend && cp ../.env.example .env && uvicorn main:app --reload     # docs
 # 3) Tests (run from project root)
 cd .. && pytest -q
 ```
-Demo logins (password `demo-only`): admin@demo.local, worker@demo.local, researcher@demo.local.
-Change `APP_SECRET` and remove demo users before any real use.
+Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` (min 10 chars) to create the owner admin; sample accounts are then not created.
 
 ## Behaviour you can show in the viva
 - `assess` returns "Research model not yet validated" if no model exists or it was trained on synthetic data.
@@ -70,3 +69,8 @@ Anyone can create an account (`POST /api/auth/register`). New accounts are alway
 admin can promote someone to `worker` (participant and screening records), `researcher` or `admin`. Registration (5/hour per IP) and failed logins (10 per 10 min)
 are rate limited. Set `DEMO_PASSWORD` on the server to change the seeded demo accounts' password.
 Before real users or real data: use a permanent PostgreSQL database (accounts reset on free hosting), verify email addresses, add password reset, and get institutional approval.
+
+## Permanent database (recommended for a public link)
+Set `DATABASE_URL` to a PostgreSQL connection string (e.g. a free Supabase or Neon project, using its IPv4 "session pooler" URI). Tables are created automatically.
+Check it with `python backend/check_db.py`. Without `DATABASE_URL` the app uses a SQLite file, which free hosts reset on every restart.
+Owner admin: `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Optional: `SEED_DEMO_USERS=1` to also create sample worker/researcher/admin accounts.

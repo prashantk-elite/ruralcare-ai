@@ -62,7 +62,7 @@ export function UsersTab() {
 
 export function PublicHome() {
   const card = (to: string, t: string, d: string) => <Link to={to} style={{ textDecoration: "none", color: "inherit" }}><div className="card"><h2>{t}</h2><p className="muted">{d}</p></div></Link>;
-  return <><h1>Welcome to RuralCare AI</h1><div className="note alert" role="note"><b>Public demo.</b> Please do not enter real health information. Data on this site is not stored permanently and the site is not a medical service.</div>
+  return <><h1>Welcome to RuralCare AI</h1><div className="note alert" role="note"><b>Academic project.</b> Please use sample values, not real patient records. This site is not a medical service.</div>
     <div className="g3">{card("/nutrition", "Nutrition planner", "Meal ideas that respect your diet, allergies, food availability and budget.")}{card("/guide", "RuralCare Guide", "Plain-language answers about screening terms and balanced eating.")}{card("/help", "Help", "How the site works, its limits and what to do in an emergency.")}</div>
     <p className="muted" style={{ marginTop: 12 }}>Screening and participant records are only for approved health workers. An administrator can upgrade your account if you are one.</p></>;
 }

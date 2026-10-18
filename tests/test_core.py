@@ -1,4 +1,5 @@
 import os, sys, tempfile
+os.environ.pop("DATABASE_URL", None)  # tests always use a throwaway SQLite file
 os.environ["DB_PATH"] = os.path.join(tempfile.mkdtemp(), "t.db")
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 from fastapi.testclient import TestClient
@@ -124,3 +125,13 @@ def test_login_throttle_after_repeated_failures():
         assert c.post("/api/auth/login", json={"email": "worker@demo.local", "password": "wrong"}).status_code == 401
     assert c.post("/api/auth/login", json={"email": "worker@demo.local", "password": "demo-only"}).status_code == 429
     appmod._hits.clear()
+
+def test_postgres_sql_translation():
+    s, ins = appmod._pg_sql("INSERT INTO users(email,pw,role) VALUES(?,?,?)")
+    assert s.endswith("VALUES(%s,%s,%s) RETURNING id") and ins
+    s, _ = appmod._pg_sql("CREATE TABLE IF NOT EXISTS t(id INTEGER PRIMARY KEY, created_at REAL, x TEXT)")
+    assert "SERIAL PRIMARY KEY" in s and "DOUBLE PRECISION" in s and "INTEGER PRIMARY KEY" not in s
+    s, ins = appmod._pg_sql("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'")
+    assert "ADD COLUMN IF NOT EXISTS status" in s and not ins
+    s, ins = appmod._pg_sql("SELECT id FROM users WHERE email=? LIMIT ? OFFSET ?")
+    assert s == "SELECT id FROM users WHERE email=%s LIMIT %s OFFSET %s" and not ins

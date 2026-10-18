@@ -29,32 +29,32 @@ function Login({ onLogin }: { onLogin: (role: string) => void }) {
   const [mode, setMode] = useState<"in" | "up">("in"); const [email, setEmail] = useState(""); const [pw, setPw] = useState(""); const [pw2, setPw2] = useState("");
   const [ack, setAck] = useState(false); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
   const submit = async (e: FormEvent) => { e.preventDefault(); setErr("");
-    if (mode === "up") { if (pw.length < 10) return setErr("Password must be at least 10 characters."); if (pw !== pw2) return setErr("Passwords do not match."); if (!ack) return setErr("Please confirm the demo notice."); }
+    if (mode === "up") { if (pw.length < 10) return setErr("Password must be at least 10 characters."); if (pw !== pw2) return setErr("Passwords do not match."); if (!ack) return setErr("Please confirm the notice above."); }
     setBusy(true);
     try { if (mode === "up") await api("/api/auth/register", { method: "POST", body: JSON.stringify({ email, password: pw }) });
       const r = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password: pw }) }); setToken(r.token); onLogin(r.role); }
     catch (x: any) { setErr(x.message); } finally { setBusy(false); } };
   return <main style={{ maxWidth: 440 }}><div className="card"><div style={{ float: "right" }}><ThemeButton /></div><h1>RuralCare AI</h1>
-    <div className="note">Academic research prototype. Not a diagnostic device. Do not enter real health information.</div>
+    <div className="note">Academic project. Not a medical service or diagnostic device. Please use sample values, not real patient records.</div>
     <div role="tablist" style={{ display: "flex", gap: 6 }}><button role="tab" aria-selected={mode === "in"} className={mode === "in" ? "btn sm" : "btn sec sm"} onClick={() => { setMode("in"); setErr(""); }}>Sign in</button><button role="tab" aria-selected={mode === "up"} className={mode === "up" ? "btn sm" : "btn sec sm"} onClick={() => { setMode("up"); setErr(""); }}>Create account</button></div>
     <form onSubmit={submit}><label htmlFor="e">Email</label><input id="e" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} />
       <label htmlFor="p">Password</label><input id="p" type="password" autoComplete={mode === "up" ? "new-password" : "current-password"} value={pw} onChange={e => setPw(e.target.value)} />
       {mode === "up" && <><label htmlFor="p2">Confirm password</label><input id="p2" type="password" autoComplete="new-password" value={pw2} onChange={e => setPw2(e.target.value)} />
-        <label style={{ fontWeight: 400 }}><input type="checkbox" checked={ack} onChange={e => setAck(e.target.checked)} />I understand this is a demo and I will not enter real health information</label>
+        <label style={{ fontWeight: 400 }}><input type="checkbox" checked={ack} onChange={e => setAck(e.target.checked)} />I understand this is an academic project, not a medical service, and I will not enter real patient records</label>
         <p className="muted">New accounts get access to the nutrition planner, guide and help. Health-worker features need administrator approval. Your email is not verified or used to send messages.</p></>}
       <p className="err" role="alert">{err}</p><button className="btn" disabled={busy}>{busy ? "Please wait…" : mode === "up" ? "Create account" : "Sign in"}</button></form>
-    {mode === "in" && <p className="muted">Demo logins (password demo-only): worker@demo.local, researcher@demo.local, admin@demo.local</p>}</div></main>;
+    </div></main>;
 }
 function ModelKpi() {
   const { data, loading } = useLoad<any>("/api/research/models");
-  const v = loading ? "…" : !data || data.status ? "No model trained" : data.synthetic ? "Synthetic demo" : data.best_model;
+  const v = loading ? "…" : !data || data.status ? "No model trained" : data.synthetic ? "Trained on synthetic data" : data.best_model;
   return <div className="card kpi"><b style={{ fontSize: 20 }}>{v}</b><span>Research model status</span></div>;
 }
 function Dashboard({ role }: { role: string }) {
   const { data, error, loading } = useLoad<any>("/api/analytics/community");
   const shown = data ? data.by_community.reduce((n: number, g: any) => n + (g.count || 0), 0) : 0;
   const hidden = data ? data.by_community.filter((g: any) => g.suppressed).length : 0;
-  return <><h1>Community Health Dashboard</h1><div className="note"><b>DEMO DATA:</b> aggregate counts only. Groups under {data?.min_group_size ?? 5} are hidden to protect privacy. Screening categories are not diagnoses.</div>
+  return <><h1>Community Health Dashboard</h1><div className="note"><b>Aggregate view:</b> counts only. Groups under {data?.min_group_size ?? 5} are hidden to protect privacy. Screening categories are not diagnoses.</div>
     <Status loading={loading} error={error} />
     {data && <><div className="kpis"><div className="card kpi"><b>{data.by_community.length}</b><span>Communities represented</span></div>
       <div className="card kpi"><b>{shown}</b><span>Participants in visible groups</span></div><div className="card kpi"><b>{hidden}</b><span>Groups hidden (small)</span></div>

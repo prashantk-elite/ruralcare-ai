@@ -38,7 +38,7 @@ export function Wizard() {
       <label><input type="checkbox" checked={f.urgent_symptoms} onChange={set("urgent_symptoms")} />Urgent symptoms reported (chest pain, severe breathlessness, fainting, confusion)</label></div>}
     {n === 2 && <div className="card"><h2>Review</h2><div className="tw"><table><tbody>{rows.map(([k, val]) => <tr key={k}><td>{k}</td><td>{val || <span className="tag">Not measured / missing</span>}</td></tr>)}
       <tr><td>BMI (derived, screening only)</td><td>{bmi ?? <span className="tag">Needs height and weight</span>}</td></tr><tr><td>Urgent symptoms</td><td>{f.urgent_symptoms ? "Yes" : "No"}</td></tr></tbody></table></div>
-      <div className="note">Data is used only for this educational research prototype. Use demo or consented practice values only.</div>
+      <div className="note">Data is used only for this educational research prototype. Use sample values only, never real patient records.</div>
       <label><input type="checkbox" checked={f.consent} onChange={set("consent")} />I confirm the participant has given explicit consent for this screening</label></div>}
     {n < 3 && <><p className="err" role="alert">{err}</p>{n > 0 && <button className="btn sec" onClick={() => { setErr(""); setN(n - 1); }}>Back</button>} {n < 2 ? <button className="btn" onClick={next}>Next</button> : <button className="btn" disabled={busy} onClick={submit}>{busy ? "Saving…" : "Save screening"}</button>}</>}
     {res && <div className="card">{res.alert && <div className="note alert" role="alert"><b>{res.alert}</b></div>}<h2>Saved screening #{res.id}</h2><p>BMI (screening measure, not a diagnosis): <b>{res.bmi}</b>. Optional measurement completeness: {Math.round(res.optional_measurement_completeness * 100)}%.</p>
@@ -81,4 +81,4 @@ export const Settings = ({ role }: { role: string }) => <><h1>Settings</h1><p cl
     <li>Charts hide groups below the minimum size so no one can be identified.</li>
     <li>Admin and researcher roles cannot read participant records.</li>
     <li>Every sensitive action is recorded in the audit log without health values.</li>
-    <li>This is a demo: please do not enter real health information.</li></ul></div></>;
+    <li>This is an academic project: please use sample values, not real patient records.</li></ul></div></>;

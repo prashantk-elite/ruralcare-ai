@@ -16,7 +16,71 @@ app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("CORS_ORIGINS", 
                    allow_methods=["*"], allow_headers=["*"])
 
 
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()  # set this to use a permanent PostgreSQL database
+if DATABASE_URL:
+    import psycopg2
+    import psycopg2.extras
+    INTEGRITY_ERRORS = (sqlite3.IntegrityError, psycopg2.IntegrityError)
+else:
+    INTEGRITY_ERRORS = (sqlite3.IntegrityError,)
+
+
+def _pg_sql(sql):
+    """Translate the SQLite-style statements used in this file to PostgreSQL. Returns (sql, is_insert)."""
+    sql = sql.replace("?", "%s")
+    head = sql.lstrip().upper()
+    if head.startswith("CREATE TABLE"):
+        sql = re.sub(r"\bINTEGER PRIMARY KEY\b", "SERIAL PRIMARY KEY", sql)
+        sql = re.sub(r"\bREAL\b", "DOUBLE PRECISION", sql)
+    if "ADD COLUMN " in sql.upper() and "IF NOT EXISTS" not in sql.upper():
+        sql = sql.replace("ADD COLUMN ", "ADD COLUMN IF NOT EXISTS ")
+    is_insert = head.startswith("INSERT")
+    if is_insert and "RETURNING" not in head:
+        sql += " RETURNING id"
+    return sql, is_insert
+
+
+class _Result:
+    def __init__(self, cur, lastrowid=None):
+        self._cur, self.lastrowid, self.rowcount = cur, lastrowid, cur.rowcount
+
+    def fetchone(self):
+        return self._cur.fetchone()
+
+    def fetchall(self):
+        return self._cur.fetchall()
+
+
+class _PG:
+    """Small adapter so the rest of the code works unchanged on PostgreSQL."""
+    def __init__(self):
+        self.conn = psycopg2.connect(DATABASE_URL, connect_timeout=10)
+        self.cur = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    def execute(self, sql, params=()):
+        sql, is_insert = _pg_sql(sql)
+        self.cur.execute(sql, params or None)
+        new_id = None
+        if is_insert:
+            row = self.cur.fetchone()
+            new_id = row["id"] if row else None
+        return _Result(self.cur, new_id)
+
+    def executescript(self, script):
+        for stmt in script.split(";"):
+            if stmt.strip():
+                self.execute(stmt)
+
+    def commit(self):
+        self.conn.commit()
+
+    def close(self):
+        self.conn.close()
+
+
 def db():
+    if DATABASE_URL:
+        return _PG()
     c = sqlite3.connect(DB)
     c.row_factory = sqlite3.Row
     c.execute("PRAGMA foreign_keys=ON")
@@ -54,10 +118,18 @@ def init():
     CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, actor_id INTEGER, action TEXT, resource TEXT,
         resource_id TEXT, ts REAL);
     """)
-    if not c.execute("SELECT 1 FROM users").fetchone():  # DEMO accounts only; never use in production
-        for email, role in [("admin@demo.local", "admin"), ("worker@demo.local", "worker"),
-                            ("researcher@demo.local", "researcher")]:
-            c.execute("INSERT INTO users(email,pw,role) VALUES(?,?,?)", (email, hash_pw(os.environ.get("DEMO_PASSWORD", "demo-only")), role))
+    admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+    admin_pw = os.environ.get("ADMIN_PASSWORD", "")
+    if admin_email:
+        if len(admin_pw) < 10:
+            raise SystemExit("ADMIN_PASSWORD must be at least 10 characters")
+        if not c.execute("SELECT 1 FROM users WHERE email=?", (admin_email,)).fetchone():
+            c.execute("INSERT INTO users(email,pw,role) VALUES(?,?,?)", (admin_email, hash_pw(admin_pw), "admin"))
+    # public sample accounts are seeded only when no owner admin is configured (or SEED_DEMO_USERS=1)
+    if os.environ.get("SEED_DEMO_USERS", "0" if admin_email else "1") == "1":
+        for email, role in [("admin@demo.local", "admin"), ("worker@demo.local", "worker"), ("researcher@demo.local", "researcher")]:
+            if not c.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
+                c.execute("INSERT INTO users(email,pw,role) VALUES(?,?,?)", (email, hash_pw(os.environ.get("DEMO_PASSWORD", "demo-only")), role))
     c.commit()
     c.close()
 
@@ -430,7 +502,7 @@ def create_user(b: NewUser, u=Depends(need("admin"))):
     c = db()
     try:
         cur = c.execute("INSERT INTO users(email,pw,role,status) VALUES(?,?,?,'active')", (b.email.lower(), hash_pw(b.password), b.role))
-    except sqlite3.IntegrityError:
+    except INTEGRITY_ERRORS:
         c.close()
         raise HTTPException(409, "Email already registered")
     c.commit()
@@ -538,7 +610,7 @@ def register(b: Register, request: Request):
     c = db()
     try:
         cur = c.execute("INSERT INTO users(email,pw,role,status) VALUES(?,?,'participant','active')", (email, hash_pw(b.password)))
-    except sqlite3.IntegrityError:
+    except INTEGRITY_ERRORS:
         c.close()
         raise HTTPException(409, "This email is already registered")
     c.commit()
