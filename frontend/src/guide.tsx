@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "./icons";
 import { api } from "./api";
+import { WaterScene } from "./art";
 
 type Topic = { id: string; title: string; icon: string; words: RegExp; q: string; a: string[]; src: string };
 const GEN = "General public-health education. Check the wording against current national guidance.";
@@ -86,6 +87,7 @@ export function Guide() {
   return <>
     <h1>RuralCare Guide</h1>
     <p className="sub">Simple health education in plain language. Pick a topic or type a question.</p>
+    <WaterScene className="guideart" />
     <div className="note">{aiOn ? "Educational only. Answers are written by an AI assistant (Google Gemini) and may contain mistakes. Do not type your name, phone number or other personal details. Your health records are never shared with it. If it is unavailable, answers come from a small approved list." : "Educational only. Answers come from a small approved list. No personal records are used and no AI model is connected."} For how you feel right now, use the <Link to="/symptoms">Symptom Checker</Link>. In an emergency call <a href="tel:112">112</a>.</div>
     <div className="card"><h2>Popular topics</h2>
       <div className="topics">{TOPICS.map(t => <button key={t.id} type="button" className="topic" onClick={() => { void ask(t.q); }}><Icon name={t.icon} size={16} />{t.title}</button>)}</div></div>

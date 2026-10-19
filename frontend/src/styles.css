@@ -185,3 +185,12 @@ html{scroll-behavior:smooth}@media(prefers-reduced-motion:reduce){html{scroll-be
 }
 .resetcode{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:clamp(26px,7vw,36px);letter-spacing:.12em;font-weight:700;text-align:center;background:var(--mint);border:2px dashed var(--pri);border-radius:14px;padding:16px 10px;margin:12px 0;user-select:all}
 .tabs .btn.sm{white-space:normal;text-align:left}
+
+/* ---- illustrations ---- */
+.art{display:block;width:100%;height:auto}
+.herogrid{display:grid;grid-template-columns:1.1fr .9fr;gap:32px;align-items:center}
+.heroart{max-width:520px;justify-self:end;border-radius:22px;box-shadow:0 18px 40px rgba(0,0,0,.28)}
+.splitrow{display:grid;grid-template-columns:1.2fr .8fr;gap:32px;align-items:center}
+.sideart{max-width:420px;justify-self:end;border-radius:20px}
+.guideart{max-height:200px;margin:0 0 14px;border-radius:18px;object-fit:cover}
+@media (max-width:820px){.herogrid,.splitrow{grid-template-columns:1fr}.heroart,.sideart{justify-self:center;max-width:100%}.heroart{order:-1;max-width:420px}.guideart{max-height:150px}}
