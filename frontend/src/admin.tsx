@@ -3,7 +3,7 @@ import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from
 import { api, apiWithTotal, fmtDate, fmtDateTime, fmtTime, qs, setAdminToken, hasAdminToken } from "./api";
 import { Icon } from "./icons";
 import { TrendChart } from "./charts";
-import { Confirm, Empty, ErrorBox, Pager, Skeleton, useApi, useToast } from "./ui2";
+import { Confirm, Empty, ErrorBox, Modal, Pager, Skeleton, useApi, useToast } from "./ui2";
 import { LabTabs } from "./pages2";
 import { UsersTab } from "./pages5";
 import { ThemeButton } from "./theme";
@@ -94,21 +94,48 @@ function Overview() {
 }
 
 /* ================= Users ================= */
+
+/* ================= Password reset requests ================= */
+function ResetRequests({ issued }: { issued: (r: any, email: string) => void }) {
+  const toast = useToast(); const r = useApi<any>("/api/admin/reset-requests"); const [busy, setBusy] = useState(0);
+  const issue = async (i: any) => { setBusy(i.id); try { const out = await api(`/api/admin/reset-requests/${i.id}/issue`, { method: "POST" }); issued(out, i.email); r.reload(); } catch (x: any) { toast(x.message, "err"); } finally { setBusy(0); } };
+  const dismiss = async (i: any) => { setBusy(i.id); try { await api(`/api/admin/reset-requests/${i.id}/dismiss`, { method: "POST" }); toast("Request dismissed"); r.reload(); } catch (x: any) { toast(x.message, "err"); } finally { setBusy(0); } };
+  const items: any[] = r.data?.items || []; const open = items.filter(i => i.status === "requested").length;
+  return <div className="card"><div className="sec-h"><h2>Password reset requests {open > 0 && <span className="badge adm-b">{open} waiting</span>}</h2><button className="btn sec sm" onClick={r.reload}>Refresh</button></div>
+    <p className="muted small">People who forgot their password appear here. Make sure it is really them (for example in person or on a call), then create a one-time code and give it to them. Codes work once and expire after {r.data?.code_minutes ?? 30} minutes.</p>
+    <ErrorBox error={r.error} retry={r.reload} />
+    {r.loading && !r.data ? <Skeleton h={40} n={2} /> : items.length ? <ul className="plain">{items.map(i => <li key={i.id}><span><b>{i.email}</b><br /><span className="muted small">Asked {fmtDateTime(i.requested_at)} · {i.status === "requested" ? "waiting for a code" : i.status === "issued" ? `code issued, expires ${fmtTime(i.expires_at)}` : i.status === "expired" ? "code expired" : "locked after wrong tries"}</span></span>
+      <span className="inline"><button className="btn sm" disabled={busy === i.id} onClick={() => issue(i)}>{i.status === "requested" ? "Create code" : "Create new code"}</button><button className="btn sec sm" disabled={busy === i.id} onClick={() => dismiss(i)}>Dismiss</button></span></li>)}</ul>
+      : <Empty title="No reset requests" text="When someone asks to reset their password it will show up here." />}</div>;
+}
+
+function CodeModal({ data, onClose }: { data: { code: string; minutes: number; email: string }; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  return <Modal title="One-time reset code" onClose={onClose}>
+    <p>Give this code to <b>{data.email}</b>. It is shown <b>only once</b> and works for {data.minutes} minutes.</p>
+    <p className="resetcode" aria-label={"Reset code " + data.code.split("").join(" ")}>{data.code}</p>
+    <p className="muted small">Tell them to open Sign in, choose Forgot password, then I have a code. Only share it with the person who owns the account.</p>
+    <div className="actions"><button className="btn sec" onClick={async () => { try { await navigator.clipboard.writeText(data.code); setCopied(true); } catch { /* clipboard may be blocked; the code is visible */ } }}>{copied ? "Copied" : "Copy code"}</button><button className="btn" onClick={onClose}>Done</button></div></Modal>;
+}
+
 function Users() {
   const toast = useToast(); const [q, setQ] = useState(""); const [role, setRole] = useState(""); const [status, setStatus] = useState(""); const [offset, setOffset] = useState(0);
-  const [rows, setRows] = useState<any[] | null>(null); const [total, setTotal] = useState(0); const [err, setErr] = useState(""); const [ask, setAsk] = useState<any>(null); const [tick, setTick] = useState(0);
+  const [rows, setRows] = useState<any[] | null>(null); const [total, setTotal] = useState(0); const [err, setErr] = useState(""); const [ask, setAsk] = useState<any>(null); const [tick, setTick] = useState(0); const [codeFor, setCodeFor] = useState<any>(null);
+  const rowReset = async (u: any) => { try { const out = await api(`/api/admin/users/${u.id}/reset-code`, { method: "POST" }); setCodeFor({ ...out, email: u.email }); } catch (x: any) { toast(x.message, "err"); } };
   useEffect(() => { let live = true; const t = setTimeout(() => { apiWithTotal(`/api/admin/users${qs({ q, role, status, limit: 10, offset })}`).then(r => { if (live) { setRows(r.data); setTotal(r.total); setErr(""); } }).catch(e => live && setErr(e.message)); }, 250); return () => { live = false; clearTimeout(t); }; }, [q, role, status, offset, tick]);
   const next = ask?.status === "suspended" ? "active" : "suspended";
   return <><h1>Users</h1><p className="sub">Account management only. Administrators cannot see anyone's health records, symptoms or wellness plans.</p>
+    <ResetRequests issued={(o, email) => setCodeFor({ ...o, email })} />
     <div className="card filters"><div><label htmlFor="uq">Search by email</label><input id="uq" type="search" value={q} onChange={e => { setQ(e.target.value); setOffset(0); }} /></div>
       <div><label htmlFor="ur">Role</label><select id="ur" value={role} onChange={e => { setRole(e.target.value); setOffset(0); }}><option value="">All</option>{["participant", "worker", "researcher", "admin"].map(r => <option key={r}>{r}</option>)}</select></div>
       <div><label htmlFor="us">Status</label><select id="us" value={status} onChange={e => { setStatus(e.target.value); setOffset(0); }}><option value="">All</option><option value="active">Active</option><option value="suspended">Suspended</option></select></div></div>
     <ErrorBox error={err} />
     <div className="card tw">{rows === null ? <Skeleton h={40} n={4} /> : rows.length ? <table className="stack"><thead><tr><th>Email</th><th>Role</th><th>Status</th><th>Last active</th><th>Created</th><th><span className="sr">Actions</span></th></tr></thead>
       <tbody>{rows.map(u => <tr key={u.id}><td data-l="Email">{u.email}</td><td data-l="Role">{u.role}</td><td data-l="Status"><span className={"badge " + ((u.status || "active") === "suspended" ? "bad" : "")}>{u.status || "active"}</span></td><td data-l="Last active">{u.last_active ? fmtDateTime(u.last_active) : "Never"}</td><td data-l="Created">{fmtDate(u.created_at) || "Unknown"}</td>
-        <td className="act"><button className="btn sec sm" onClick={() => setAsk(u)}>{(u.status || "active") === "suspended" ? "Reactivate" : "Deactivate"}</button></td></tr>)}</tbody></table> : <Empty title="No users match" />}
+        <td className="act">{u.role !== "admin" && (u.status || "active") !== "suspended" && <button className="btn sec sm" onClick={() => rowReset(u)}>Reset password</button>} <button className="btn sec sm" onClick={() => setAsk(u)}>{(u.status || "active") === "suspended" ? "Reactivate" : "Deactivate"}</button></td></tr>)}</tbody></table> : <Empty title="No users match" />}
       <Pager total={total} limit={10} offset={offset} onPage={setOffset} /></div>
     <details className="card"><summary><b>Change roles or create accounts</b></summary><UsersTab /></details>
+    {codeFor && <CodeModal data={codeFor} onClose={() => setCodeFor(null)} />}
     {ask && <Confirm title={next === "suspended" ? "Deactivate this account?" : "Reactivate this account?"} danger={next === "suspended"} label={next === "suspended" ? "Deactivate" : "Reactivate"} onNo={() => setAsk(null)}
       body={<p>{ask.email} {next === "suspended" ? "will be signed out immediately and will not be able to sign in until reactivated." : "will be able to sign in again."} This action is recorded in the audit log.</p>}
       onYes={async () => { try { await api(`/api/admin/users/${ask.id}/status`, { method: "PATCH", body: JSON.stringify({ status: next }) }); toast("Account updated"); setAsk(null); setTick(t => t + 1); } catch (x: any) { toast(x.message, "err"); } }} />}</>;

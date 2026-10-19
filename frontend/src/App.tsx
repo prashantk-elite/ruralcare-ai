@@ -5,6 +5,7 @@ import { Landing, Shell, BarChart, Lang, Foot, Group } from "./ui";
 import { Wizard, LabTabs, Notifications } from "./pages2";
 import { Help } from "./help";
 import { Guide } from "./guide";
+import { Recover } from "./recover";
 import { Profile, Nutrition2 } from "./pages3";
 import { Followups2, NutritionInsights } from "./pages5";
 import { useAutoTranslate } from "./i18n";
@@ -35,7 +36,7 @@ function useLoad<T>(path: string) {
 
 function Login({ onLogin, notice, onBack }: { onLogin: (role: string) => void; notice: string; onBack: () => void }) {
   const [mode, setMode] = useState<"in" | "up">("in"); const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [pw, setPw] = useState(""); const [pw2, setPw2] = useState("");
-  const [ack, setAck] = useState(false); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false); const [show, setShow] = useState(false);
+  const [ack, setAck] = useState(false); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false); const [show, setShow] = useState(false); const [recover, setRecover] = useState(false);
   const submit = async (e: FormEvent) => { e.preventDefault(); setErr("");
     if (!email.trim()) return setErr("Enter your email address.");
     if (mode === "up") { if (pw.length < 10) return setErr("Password must be at least 10 characters."); if (pw !== pw2) return setErr("Passwords do not match."); if (!ack) return setErr("Please tick the box to confirm you understand."); }
@@ -43,6 +44,7 @@ function Login({ onLogin, notice, onBack }: { onLogin: (role: string) => void; n
     try { if (mode === "up") await api("/api/auth/register", { method: "POST", body: JSON.stringify({ email, password: pw, name: name.trim() || undefined }) });
       const r = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password: pw }) }); setToken(r.token); onLogin(r.role); }
     catch (x: any) { setErr(x.message); } finally { setBusy(false); } };
+  if (recover) return <main style={{ maxWidth: 440 }}><div className="card"><Recover email={email} onBack={() => setRecover(false)} /></div></main>;
   return <main style={{ maxWidth: 440 }}><div className="card"><div style={{ float: "right" }}><ThemeButton /></div><h1>RuralCare AI</h1>
     <div className="note">Academic project. Not a medical service. In an emergency call <a href="tel:112">112</a>.</div>
     {notice && <div className="note" role="status">{notice}</div>}
@@ -51,6 +53,7 @@ function Login({ onLogin, notice, onBack }: { onLogin: (role: string) => void; n
       {mode === "up" && <><label htmlFor="nm">Your name (optional)</label><input id="nm" autoComplete="given-name" maxLength={60} value={name} onChange={e => setName(e.target.value)} /></>}
       <label htmlFor="e">Email</label><input id="e" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} />
       <label htmlFor="p">Password</label><div className="pwrow"><input id="p" type={show ? "text" : "password"} autoComplete={mode === "up" ? "new-password" : "current-password"} value={pw} onChange={e => setPw(e.target.value)} /><button type="button" className="btn sec sm" aria-pressed={show} onClick={() => setShow(!show)}>{show ? "Hide" : "Show"}</button></div>
+      {mode === "in" && <p className="small" style={{ margin: "6px 0 0" }}><button type="button" className="linkbtn" onClick={() => setRecover(true)}>Forgot password?</button></p>}
       {mode === "up" && <><label htmlFor="p2">Confirm password</label><input id="p2" type={show ? "text" : "password"} autoComplete="new-password" value={pw2} onChange={e => setPw2(e.target.value)} />
         <label style={{ fontWeight: 400 }}><input type="checkbox" checked={ack} onChange={e => setAck(e.target.checked)} />I understand this is a student project: what I enter is stored on its server, it has not had a formal security or privacy review, and it is not a medical service.</label>
         <p className="muted">New accounts can use the health dashboard, symptom checker, diet and wellness, and the guide. Your email is not verified or used to send messages. Read the <Link to="/privacy">privacy notice</Link>.</p></>}

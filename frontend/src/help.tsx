@@ -50,7 +50,7 @@ const SECTIONS: Section[] = [
     { q: "What does an administrator see?", a: ["Real totals, active sessions that are verified on the server, user management, settings, announcements, system and AI status, and an audit log. Admin sessions end after 30 minutes, or after 20 minutes without activity."] },
   ] },
   { id: "trouble", title: "Troubleshooting", icon: "help", items: [
-    { q: "I forgot my password.", a: ["There is no email reset because emails are not verified. Ask the administrator of the site to reset your account."] },
+    { q: "I forgot my password.", a: ["On the sign-in page choose Forgot password, enter your email and request a code. This site cannot send email, so an administrator (for example the owner of the project) sees your request and gives you a one-time code once they are sure it is you.", "Then choose I have a code, enter the code and a new password of at least 10 characters. The code works once and expires after 30 minutes. After a reset you are signed out everywhere."] },
     { q: "It says my session has ended.", a: ["Sign in again. This happens after about an hour or after reloading the page."] },
     { q: "My record would not save.", a: ["Check the message under the field. Values must be realistic (for example a heart rate between 20 and 250) and the date cannot be far in the future. Too many saves in one hour are also limited to protect the site."] },
     { q: "Something looks broken.", a: ["Reload the page and sign in again. If it keeps happening, tell the person who runs the site and say which page you were on. Do not include passwords or health details."] },

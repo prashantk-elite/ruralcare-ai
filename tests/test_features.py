@@ -452,3 +452,109 @@ def test_care_contacts_are_private():
     assert c.delete(f"/api/care-contacts/{cid}", headers=B).status_code == 404
     assert c.post("/api/care-contacts", headers=A, json={"name": "x", "phone": "abc"}).status_code == 422
     assert c.delete(f"/api/care-contacts/{cid}", headers=A).status_code == 200
+
+
+# ---------- forgotten password (admin-assisted, no email) ----------
+def _forgot(email):
+    appmod._hits.clear()
+    return c.post("/api/auth/forgot", json={"email": email})
+
+
+def _issue_for(email):
+    ah = admin_headers()
+    items = c.get("/api/admin/reset-requests", headers=ah).json()["items"]
+    row = next(i for i in items if i["email"] == email and i["status"] == "requested")
+    r = c.post(f"/api/admin/reset-requests/{row['id']}/issue", headers=ah)
+    assert r.status_code == 200, r.text
+    return r.json()["code"]
+
+
+def test_forgot_answer_is_identical_for_unknown_and_known_emails():
+    a = _forgot("nobody-here@example.com")
+    b = _forgot("alice@example.com")
+    assert a.status_code == b.status_code == 200 and a.json() == b.json()
+
+
+def test_full_reset_flow_changes_password_and_ends_sessions():
+    make_user("rita@example.com")
+    old = c.post("/api/auth/login", json={"email": "rita@example.com", "password": PW}).json()["token"]
+    assert _forgot("rita@example.com").status_code == 200
+    code = _issue_for("rita@example.com")
+    assert len(code) == 11 and code[5] == "-"
+    appmod._hits.clear()
+    r = c.post("/api/auth/reset", json={"email": "rita@example.com", "code": code.lower().replace("-", " "), "new_password": "brand-new-pass-1"})
+    assert r.status_code == 200, r.text
+    appmod._hits.clear()
+    assert c.post("/api/auth/login", json={"email": "rita@example.com", "password": PW}).status_code == 401
+    assert c.post("/api/auth/login", json={"email": "rita@example.com", "password": "brand-new-pass-1"}).status_code == 200
+    assert c.get("/api/profile", headers={"Authorization": "Bearer " + old}).status_code == 401  # old session ended
+
+
+def test_code_is_single_use_and_wrong_codes_lock_it():
+    make_user("sam@example.com")
+    _forgot("sam@example.com")
+    code = _issue_for("sam@example.com")
+    appmod._hits.clear()
+    body = {"email": "sam@example.com", "new_password": "another-long-pass-2"}
+    for _ in range(5):
+        assert c.post("/api/auth/reset", json={**body, "code": "WRONG-CODE9"}).status_code == 400
+        appmod._hits.clear()
+    # five misses locked the code, even the right one no longer works
+    assert c.post("/api/auth/reset", json={**body, "code": code}).status_code == 400
+    _forgot("sam@example.com")
+    code2 = _issue_for("sam@example.com")
+    appmod._hits.clear()
+    assert c.post("/api/auth/reset", json={**body, "code": code2}).status_code == 200
+    appmod._hits.clear()
+    assert c.post("/api/auth/reset", json={**body, "code": code2}).status_code == 400  # already used
+
+
+def test_expired_code_is_rejected():
+    make_user("tina@example.com")
+    _forgot("tina@example.com")
+    code = _issue_for("tina@example.com")
+    cn = appmod.db()
+    cn.execute("UPDATE password_resets SET expires_at=? WHERE status='issued'", (time.time() - 5,))
+    cn.commit()
+    cn.close()
+    appmod._hits.clear()
+    assert c.post("/api/auth/reset", json={"email": "tina@example.com", "code": code, "new_password": "yet-another-pass-3"}).status_code == 400
+
+
+def test_reset_needs_admin_and_never_applies_to_admins():
+    make_user("uma@example.com")
+    _forgot("uma@example.com")
+    assert c.get("/api/admin/reset-requests", headers=A).status_code == 403
+    assert c.post("/api/admin/reset-requests/1/issue", headers=A).status_code == 403
+    ah = admin_headers()
+    appmod._hits.clear()
+    assert c.post("/api/auth/forgot", json={"email": "admin@demo.local"}).status_code == 200  # same generic answer
+    items = c.get("/api/admin/reset-requests", headers=ah).json()["items"]
+    assert all(i["email"] != "admin@demo.local" for i in items)
+    uid = next(i["user_id"] for i in items if i["email"] == "uma@example.com")
+    assert c.post(f"/api/admin/users/{uid}/reset-code", headers=ah).status_code == 200
+    admin_id = c.get("/api/admin/users", headers=ah).json()
+    aid = next(u["id"] for u in admin_id if u["email"] == "admin@demo.local")
+    assert c.post(f"/api/admin/users/{aid}/reset-code", headers=ah).status_code == 409
+
+
+def test_reset_is_rate_limited_and_validates_password_length():
+    appmod._hits.clear()
+    for _ in range(8):
+        c.post("/api/auth/reset", json={"email": "ghost@example.com", "code": "AAAAA-BBBBB", "new_password": "long-enough-pw-1"})
+    assert c.post("/api/auth/reset", json={"email": "ghost@example.com", "code": "AAAAA-BBBBB", "new_password": "long-enough-pw-1"}).status_code == 429
+    appmod._hits.clear()
+    assert c.post("/api/auth/reset", json={"email": "alice@example.com", "code": "AAAAA-BBBBB", "new_password": "short"}).status_code == 422
+    for _ in range(3):
+        c.post("/api/auth/forgot", json={"email": "alice@example.com"})
+    assert c.post("/api/auth/forgot", json={"email": "alice@example.com"}).status_code == 429
+
+
+def test_reset_events_and_audit_hold_no_secrets():
+    ah = admin_headers()
+    logs = str(c.get("/api/admin/audit-logs", headers=ah).json())
+    assert "password_reset" in logs and "brand-new-pass" not in logs
+    cn = appmod.db()
+    rows = cn.execute("SELECT code_hash FROM password_resets WHERE status='used'").fetchall()
+    cn.close()
+    assert all(r["code_hash"] is None for r in rows)

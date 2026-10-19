@@ -830,8 +830,8 @@ async def unhandled_error(request: Request, exc: Exception):
 
 
 # ---- Feature modules (health records, symptoms, wellness, accounts, admin portal) ----
-import account, health_records, symptoms, wellness, care, admin_portal  # noqa: E402
+import account, health_records, symptoms, wellness, care, admin_portal, password_reset  # noqa: E402
 
 _this = sys.modules[__name__]
-for _mod in (account, health_records, symptoms, wellness, care, admin_portal):
+for _mod in (account, health_records, symptoms, wellness, care, admin_portal, password_reset):
     _mod.register(app, _this)

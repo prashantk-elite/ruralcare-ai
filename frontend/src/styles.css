@@ -183,3 +183,5 @@ html{scroll-behavior:smooth}@media(prefers-reduced-motion:reduce){html{scroll-be
  table.stack td::before{content:attr(data-l);font-weight:600;color:var(--tx2);text-align:left;flex:none}
  table.stack td:empty{display:none}table.stack td.act{justify-content:flex-end;padding-top:8px}table.stack td.act::before{display:none}
 }
+.resetcode{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:clamp(26px,7vw,36px);letter-spacing:.12em;font-weight:700;text-align:center;background:var(--mint);border:2px dashed var(--pri);border-radius:14px;padding:16px 10px;margin:12px 0;user-select:all}
+.tabs .btn.sm{white-space:normal;text-align:left}

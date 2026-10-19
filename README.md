@@ -83,3 +83,6 @@ Owner admin: `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Optional: `SEED_DEMO_USERS=1` to a
 **Database:** new tables are created automatically on start (SQLite or PostgreSQL). See `.env.example` for variables (placeholders only).
 **Tests:** `python -m pytest tests -q` from the project root. **Build:** `cd frontend && npm ci && npm run build`.
 **Limits:** tokens are kept in memory, so a page reload asks you to sign in again; rate limits reset on restart; the facility directory ships empty (admins add verified entries); not a medical device and no formal privacy review.
+
+## Forgot password (no email service needed)
+Sign-in page → Forgot password → the person requests a code. An administrator sees the request under Admin Portal → Users → Password reset requests, confirms the person's identity, and creates a one-time code (30 minutes, 5 tries, single use; only its hash is stored). The person enters the code and a new password, and every open session for that account is ended. Administrators can also create a code for any non-admin user from the Users list. Administrator accounts are reset on the server with `python backend/create_admin.py you@example.com`.
