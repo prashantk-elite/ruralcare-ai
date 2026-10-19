@@ -74,3 +74,12 @@ Before real users or real data: use a permanent PostgreSQL database (accounts re
 Set `DATABASE_URL` to a PostgreSQL connection string (e.g. a free Supabase or Neon project, using its IPv4 "session pooler" URI). Tables are created automatically.
 Check it with `python backend/check_db.py`. Without `DATABASE_URL` the app uses a SQLite file, which free hosts reset on every restart.
 Owner admin: `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Optional: `SEED_DEMO_USERS=1` to also create sample worker/researcher/admin accounts.
+
+## Health platform update (dashboard, symptom checker, wellness, admin portal)
+**New for users:** sidebar with Health Dashboard, Symptom Checker, Health Records, Diet and Wellness, Health History, Find a Doctor, Profile and Settings. All health values are typed in by the user (no device integration). Records are private to their owner.
+**Symptom checker:** fixed emergency rules run first and never wait for AI. Optional AI wording needs `ANTHROPIC_API_KEY`; it can only raise urgency. Not a diagnosis.
+**Admin Portal:** `/admin/login` (no public admin sign-up) then `/admin/dashboard`: real aggregate counts, verified live sessions, user management, settings, announcements, system/AI status, audit log. Administrators never see individual health data.
+**First admin:** set `ADMIN_EMAIL` and `ADMIN_PASSWORD` on the server, or run `python backend/create_admin.py you@example.com` (hidden password prompt).
+**Database:** new tables are created automatically on start (SQLite or PostgreSQL). See `.env.example` for variables (placeholders only).
+**Tests:** `python -m pytest tests -q` from the project root. **Build:** `cd frontend && npm ci && npm run build`.
+**Limits:** tokens are kept in memory, so a page reload asks you to sign in again; rate limits reset on restart; the facility directory ships empty (admins add verified entries); not a medical device and no formal privacy review.

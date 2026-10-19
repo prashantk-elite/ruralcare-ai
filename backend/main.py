@@ -1,9 +1,10 @@
-"""RuralCare AI API. Educational research prototype: synthetic/demo data only."""
-import os, re, hmac, hashlib, json, time, base64, sqlite3, secrets
+"""RuralCare AI API. Academic project: health tracking, symptom information, wellness guidance and an admin portal."""
+import os, re, hmac, hashlib, json, time, base64, sqlite3, secrets, datetime, sys
 from pathlib import Path
 from typing import Optional, Literal
-from fastapi import FastAPI, Depends, HTTPException, Header, Request
+from fastapi import FastAPI, Depends, HTTPException, Header, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, model_validator
 from nutrition import recommend
 
@@ -11,9 +12,13 @@ SECRET = os.environ.get("APP_SECRET", "dev-only-change-me").encode()
 DB = os.environ.get("DB_PATH", "ruralcare.db")
 MODEL_DIR = Path(os.environ.get("MODEL_DIR", "../ml/models"))
 MIN_GROUP = int(os.environ.get("MIN_GROUP_SIZE", "5"))
-app = FastAPI(title="RuralCare AI API", version="0.1")
+USER_SESSION_SECONDS = 3600          # normal sign-in lasts one hour
+ADMIN_SESSION_SECONDS = 1800         # administrator sign-in lasts 30 minutes
+ADMIN_IDLE_SECONDS = 1200            # ...and ends after 20 minutes without a request
+TZ_OFFSET = int(os.environ.get("PLATFORM_TZ_OFFSET_SECONDS", "19800"))  # IST: "day" boundaries for activity counts
+app = FastAPI(title="RuralCare AI API", version="1.0")
 app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(","),
-                   allow_methods=["*"], allow_headers=["*"])
+                   allow_methods=["*"], allow_headers=["*"], expose_headers=["X-Total-Count"])
 
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()  # set this to use a permanent PostgreSQL database
@@ -97,8 +102,11 @@ def check_pw(pw, stored):
     return hmac.compare_digest(hash_pw(pw, bytes.fromhex(s)).split("$")[1], h)
 
 
-def make_token(uid, role):
-    p = base64.urlsafe_b64encode(json.dumps({"uid": uid, "role": role, "exp": time.time() + 3600}).encode()).decode()
+def make_token(uid, role, sid=None, ttl=USER_SESSION_SECONDS):
+    body = {"uid": uid, "role": role, "exp": time.time() + ttl}
+    if sid:
+        body["sid"] = sid
+    p = base64.urlsafe_b64encode(json.dumps(body).encode()).decode()
     return p + "." + hmac.new(SECRET, p.encode(), hashlib.sha256).hexdigest()
 
 
@@ -137,36 +145,185 @@ def init():
 init()
 
 
-def audit(actor, action, resource, rid=""):
+def _add_column(c, table, coldef):
+    """Add a column to an existing table; harmless if it is already there."""
+    try:
+        c.execute(f"ALTER TABLE {table} ADD COLUMN {coldef}")
+    except sqlite3.OperationalError:
+        pass
+
+
+def init_v2():
+    """Sessions, activity counters, operational events, platform settings and audit outcome."""
     c = db()
-    c.execute("INSERT INTO audit(actor_id,action,resource,resource_id,ts) VALUES(?,?,?,?,?)",
-              (actor, action, resource, str(rid), time.time()))
+    c.executescript("""
+    CREATE TABLE IF NOT EXISTS user_sessions(id TEXT PRIMARY KEY, user_id INTEGER, kind TEXT, created_at REAL,
+        last_seen REAL, expires_at REAL, ended_at REAL);
+    CREATE TABLE IF NOT EXISTS daily_activity(id INTEGER PRIMARY KEY, day TEXT, user_id INTEGER);
+    CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY, ts REAL, kind TEXT, anon TEXT, detail TEXT);
+    CREATE TABLE IF NOT EXISTS platform_settings(id INTEGER PRIMARY KEY, skey TEXT UNIQUE, svalue TEXT, updated_at REAL, updated_by INTEGER);
+    CREATE INDEX IF NOT EXISTS ix_sessions_user ON user_sessions(user_id);
+    CREATE INDEX IF NOT EXISTS ix_daily_activity ON daily_activity(day, user_id);
+    CREATE INDEX IF NOT EXISTS ix_events_ts ON events(ts)
+    """)
+    _add_column(c, "audit", "outcome TEXT DEFAULT 'success'")
+    _add_column(c, "users", "created_at REAL")
+    c.commit()
+    c.close()
+
+
+init_v2()
+
+
+SETTINGS_DEFAULTS = {          # key: (default, type, minimum, maximum)
+    "ai_enabled": (True, "bool", None, None),
+    "registration_open": (True, "bool", None, None),
+    "symptom_checker_enabled": (True, "bool", None, None),
+    "default_step_goal": (8000, "int", 1000, 50000),
+    "default_water_goal_ml": (2000, "int", 500, 6000),
+    "active_window_minutes": (5, "int", 1, 30),
+}
+
+
+def get_settings():
+    c = db()
+    rows = {r["skey"]: r["svalue"] for r in c.execute("SELECT skey, svalue FROM platform_settings").fetchall()}
+    c.close()
+    out = {}
+    for k, (dflt, typ, _lo, _hi) in SETTINGS_DEFAULTS.items():
+        if k in rows:
+            try:
+                out[k] = (rows[k] == "1") if typ == "bool" else int(rows[k])
+                continue
+            except ValueError:
+                pass
+        out[k] = dflt
+    return out
+
+
+def get_setting(key):
+    return get_settings()[key]
+
+
+def set_setting(key, value, by):
+    c = db()
+    stored = ("1" if value else "0") if SETTINGS_DEFAULTS[key][1] == "bool" else str(int(value))
+    if c.execute("SELECT 1 FROM platform_settings WHERE skey=?", (key,)).fetchone():
+        c.execute("UPDATE platform_settings SET svalue=?, updated_at=?, updated_by=? WHERE skey=?", (stored, time.time(), by, key))
+    else:
+        c.execute("INSERT INTO platform_settings(skey,svalue,updated_at,updated_by) VALUES(?,?,?,?)", (key, stored, time.time(), by))
+    c.commit()
+    c.close()
+
+
+def anon(uid):
+    """Stable anonymous label for a user in operational views. Not reversible without the server secret."""
+    return hmac.new(SECRET, f"anon:{uid}".encode(), hashlib.sha256).hexdigest()[:8]
+
+
+def day_str(ts=None):
+    return (datetime.datetime.fromtimestamp((ts or time.time()) + TZ_OFFSET, datetime.timezone.utc)).strftime("%Y-%m-%d")
+
+
+def log_event(kind, uid=None, detail=""):
+    """Operational event for the admin feed. Never put health values, passwords, tokens or emails in `detail`."""
+    try:
+        c = db()
+        c.execute("INSERT INTO events(ts,kind,anon,detail) VALUES(?,?,?,?)",
+                  (time.time(), kind, anon(uid) if uid else None, str(detail)[:200]))
+        c.commit()
+        c.close()
+    except Exception:
+        pass
+
+
+def audit(actor, action, resource, rid="", outcome="success"):
+    c = db()
+    c.execute("INSERT INTO audit(actor_id,action,resource,resource_id,ts,outcome) VALUES(?,?,?,?,?,?)",
+              (actor, action, resource, str(rid), time.time(), outcome))
+    c.commit()
+    c.close()
+
+
+def _mark_active_day(c, uid, now):
+    d = day_str(now)
+    if not c.execute("SELECT 1 FROM daily_activity WHERE day=? AND user_id=?", (d, uid)).fetchone():
+        c.execute("INSERT INTO daily_activity(day,user_id) VALUES(?,?)", (d, uid))
+
+
+def new_session(uid, kind, ttl):
+    sid = secrets.token_hex(16)
+    now = time.time()
+    c = db()
+    c.execute("INSERT INTO user_sessions(id,user_id,kind,created_at,last_seen,expires_at,ended_at) VALUES(?,?,?,?,?,?,NULL)",
+              (sid, uid, kind, now, now, now + ttl))
+    _mark_active_day(c, uid, now)
+    c.commit()
+    c.close()
+    return sid
+
+
+def end_session(sid):
+    c = db()
+    c.execute("UPDATE user_sessions SET ended_at=? WHERE id=? AND ended_at IS NULL", (time.time(), sid))
+    c.commit()
+    c.close()
+
+
+def end_user_sessions(uid):
+    c = db()
+    c.execute("UPDATE user_sessions SET ended_at=? WHERE user_id=? AND ended_at IS NULL", (time.time(), uid))
     c.commit()
     c.close()
 
 
 def user(authorization: Optional[str] = Header(None)):
+    """Authenticate the bearer token. The role always comes from the database, never from the token alone,
+    and a token tied to a session stops working as soon as that session is ended, expired or idle."""
+    c = None
     try:
         p, sig = (authorization or "").removeprefix("Bearer ").split(".")
         if not hmac.compare_digest(sig, hmac.new(SECRET, p.encode(), hashlib.sha256).hexdigest()):
             raise ValueError
         d = json.loads(base64.urlsafe_b64decode(p))
-        if d["exp"] < time.time():
+        now = time.time()
+        if d["exp"] < now:
             raise ValueError
         c = db()
-        r = c.execute("SELECT status FROM users WHERE id=?", (d["uid"],)).fetchone()
-        c.close()
+        r = c.execute("SELECT status, role FROM users WHERE id=?", (d["uid"],)).fetchone()
         if not r or (r["status"] or "active") == "suspended":
             raise ValueError
+        d["role"] = r["role"]
+        d["kind"] = None
+        sid = d.get("sid")
+        if sid:
+            s = c.execute("SELECT kind,last_seen,expires_at,ended_at FROM user_sessions WHERE id=? AND user_id=?",
+                          (sid, d["uid"])).fetchone()
+            if not s or s["ended_at"] is not None or s["expires_at"] < now:
+                raise ValueError
+            if s["kind"] == "admin" and now - s["last_seen"] > ADMIN_IDLE_SECONDS:
+                c.execute("UPDATE user_sessions SET ended_at=? WHERE id=?", (now, sid))
+                c.commit()
+                raise ValueError
+            d["kind"] = s["kind"]
+            if now - s["last_seen"] >= 30:
+                c.execute("UPDATE user_sessions SET last_seen=? WHERE id=?", (now, sid))
+                _mark_active_day(c, d["uid"], now)
+                c.commit()
         return d
     except Exception:
         raise HTTPException(401, "Not authenticated")
+    finally:
+        if c is not None:
+            c.close()
 
 
 def need(*roles):
     def dep(u=Depends(user)):
         if u["role"] not in roles:
             raise HTTPException(403, "Not permitted for this role")
+        if u["role"] == "admin" and u.get("kind") != "admin":
+            raise HTTPException(403, "Administrator access needs an Admin Portal sign-in")
         return u
     return dep
 
@@ -185,16 +342,29 @@ def login(b: Login, request: Request):
     c.close()
     if not r or not check_pw(b.password, r["pw"]):
         record("login", key)
+        log_event("login_failed")
         raise HTTPException(401, "Incorrect email or password")
     if (r["status"] or "active") == "suspended":
         raise HTTPException(403, "Account suspended")
+    if r["role"] == "admin":
+        # Administrator accounts have their own sign-in page and a shorter session.
+        raise HTTPException(403, "Administrator accounts sign in through the Admin Portal.")
     _hits.pop(("login", key), None)
-    return {"token": make_token(r["id"], r["role"]), "role": r["role"]}
+    sid = new_session(r["id"], "user", USER_SESSION_SECONDS)
+    log_event("login", r["id"])
+    return {"token": make_token(r["id"], r["role"], sid), "role": r["role"]}
+
+
+@app.post("/api/auth/logout")
+def logout(u=Depends(user)):
+    if u.get("sid"):
+        end_session(u["sid"])
+    return {"signed_out": True}
 
 
 @app.get("/api/auth/me")
 def me(u=Depends(user)):
-    return u
+    return {"uid": u["uid"], "role": u["role"], "exp": u["exp"]}
 
 
 class NewParticipant(BaseModel):
@@ -467,12 +637,29 @@ def health():
 
 
 @app.get("/api/admin/users")
-def admin_users(u=Depends(need("admin"))):
+def admin_users(response: Response, u=Depends(need("admin")), q: str = "", role: str = "", status: str = "",
+                limit: int = 200, offset: int = 0):
+    """Account list for administrators: account fields only, never health data. Supports search and paging."""
+    where, args = [], []
+    if q.strip():
+        where.append("LOWER(email) LIKE ?")
+        args.append("%" + q.strip().lower()[:80] + "%")
+    if role in ("participant", "worker", "researcher", "admin"):
+        where.append("role=?")
+        args.append(role)
+    if status in ("active", "suspended"):
+        where.append("COALESCE(status,'active')=?")
+        args.append(status)
+    clause = (" WHERE " + " AND ".join(where)) if where else ""
     c = db()
-    rows = c.execute("SELECT id,email,role,status FROM users ORDER BY id").fetchall()
+    total = c.execute("SELECT COUNT(*) n FROM users" + clause, tuple(args)).fetchone()["n"]
+    rows = c.execute("SELECT id,email,role,status,created_at FROM users" + clause + " ORDER BY id LIMIT ? OFFSET ?",
+                     tuple(args) + (max(1, min(limit, 200)), max(0, offset))).fetchall()
+    seen = {r["user_id"]: r["m"] for r in c.execute("SELECT user_id, MAX(last_seen) m FROM user_sessions GROUP BY user_id").fetchall()}
     c.close()
+    response.headers["X-Total-Count"] = str(total)
     audit(u["uid"], "list", "users")
-    return [dict(r) for r in rows]
+    return [{**dict(r), "last_active": seen.get(r["id"])} for r in rows]
 
 
 # ---- Admin user management, nutrition feedback and nutrition analytics ----
@@ -501,9 +688,11 @@ class NewUser(BaseModel):
 def create_user(b: NewUser, u=Depends(need("admin"))):
     c = db()
     try:
-        cur = c.execute("INSERT INTO users(email,pw,role,status) VALUES(?,?,?,'active')", (b.email.lower(), hash_pw(b.password), b.role))
+        cur = c.execute("INSERT INTO users(email,pw,role,status,created_at) VALUES(?,?,?,'active',?)",
+                        (b.email.strip().lower(), hash_pw(b.password), b.role, time.time()))
     except INTEGRITY_ERRORS:
         c.close()
+        audit(u["uid"], "create", "user", "", "failed: email already registered")
         raise HTTPException(409, "Email already registered")
     c.commit()
     c.close()
@@ -532,7 +721,10 @@ def change_user(uid: int, b: UserChange, u=Depends(need("admin"))):
         c.execute("UPDATE users SET status=? WHERE id=?", (b.status, uid))
     c.commit()
     c.close()
-    audit(u["uid"], "update", "user", uid)
+    if b.status == "suspended" or b.role:
+        end_user_sessions(uid)  # a deactivated or re-roled account must sign in again
+    what = ",".join(x for x in ((f"role={b.role}" if b.role else ""), (f"status={b.status}" if b.status else "")) if x)
+    audit(u["uid"], "update:" + what, "user", uid)
     return {"updated": True}
 
 
@@ -597,11 +789,17 @@ def record(bucket, key):
 class Register(BaseModel):
     email: str = Field(min_length=5, max_length=120)
     password: str = Field(min_length=10, max_length=100)
+    name: Optional[str] = Field(None, max_length=60)
+
+
+REGISTER_HOOKS: list = []  # feature modules add callables(uid, name) here
 
 
 @app.post("/api/auth/register", status_code=201)
 def register(b: Register, request: Request):
     """Public sign-up. Always creates the limited 'participant' role; elevated roles are admin-assigned only."""
+    if not get_setting("registration_open"):
+        raise HTTPException(403, "New sign-ups are paused right now. Please try again later.")
     email = b.email.strip().lower()
     if not EMAIL_RE.match(email):
         raise HTTPException(422, "Enter a valid email address")
@@ -609,7 +807,8 @@ def register(b: Register, request: Request):
     throttle("register", ip, REGISTER_LIMIT, 3600)
     c = db()
     try:
-        cur = c.execute("INSERT INTO users(email,pw,role,status) VALUES(?,?,'participant','active')", (email, hash_pw(b.password)))
+        cur = c.execute("INSERT INTO users(email,pw,role,status,created_at) VALUES(?,?,'participant','active',?)",
+                        (email, hash_pw(b.password), time.time()))
     except INTEGRITY_ERRORS:
         c.close()
         raise HTTPException(409, "This email is already registered")
@@ -617,4 +816,22 @@ def register(b: Register, request: Request):
     c.close()
     record("register", ip)
     audit(cur.lastrowid, "register", "user", cur.lastrowid)
+    log_event("signup", cur.lastrowid)
+    for hook in REGISTER_HOOKS:
+        hook(cur.lastrowid, b.name)
     return {"id": cur.lastrowid, "role": "participant"}
+
+
+@app.exception_handler(Exception)
+async def unhandled_error(request: Request, exc: Exception):
+    """Record that something failed (route and error type only, never request contents) and answer safely."""
+    log_event("server_error", detail=f"{request.method} {request.url.path} {type(exc).__name__}")
+    return JSONResponse({"detail": "Something went wrong on our side. Please try again in a moment."}, status_code=500)
+
+
+# ---- Feature modules (health records, symptoms, wellness, accounts, admin portal) ----
+import account, health_records, symptoms, wellness, care, admin_portal  # noqa: E402
+
+_this = sys.modules[__name__]
+for _mod in (account, health_records, symptoms, wellness, care, admin_portal):
+    _mod.register(app, _this)

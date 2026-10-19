@@ -9,7 +9,9 @@ from nutrition import recommend
 c = TestClient(app)
 
 def tok(email):
-    return {"Authorization": "Bearer " + c.post("/api/auth/login", json={"email": email, "password": "demo-only"}).json()["token"]}
+    # administrators sign in through the separate Admin Portal endpoint; everyone else uses the normal one
+    path = "/api/admin/login" if email.startswith("admin@") else "/api/auth/login"
+    return {"Authorization": "Bearer " + c.post(path, json={"email": email, "password": "demo-only"}).json()["token"]}
 
 def test_bad_login(): assert c.post("/api/auth/login", json={"email": "worker@demo.local", "password": "x"}).status_code == 401
 def test_no_token(): assert c.get("/api/participants").status_code == 401
