@@ -4,6 +4,7 @@ import { api, setToken, onAuthLost } from "./api";
 import { Landing, Shell, BarChart, Lang, Foot, Group } from "./ui";
 import { Wizard, LabTabs, Notifications } from "./pages2";
 import { Help } from "./help";
+import { Guide } from "./guide";
 import { Profile, Nutrition2 } from "./pages3";
 import { Followups2, NutritionInsights } from "./pages5";
 import { useAutoTranslate } from "./i18n";
@@ -89,23 +90,6 @@ function Participants() {
       <div><label htmlFor="cm">Community code</label><input id="cm" value={f.community} onChange={e => setF({ ...f, community: e.target.value })} /></div></div>
       <label><input type="checkbox" checked={f.consent_given} onChange={e => setF({ ...f, consent_given: e.target.checked })} />Participant gave explicit consent for screening and nutrition research</label>
       <p role="alert" className={msg.startsWith("Registered") ? "" : "err"}>{msg}</p><button className="btn">Register</button></form></>;
-}
-
-const FAQ: [RegExp, string, string][] = [
-  [/bmi/i, "BMI is weight (kg) divided by height (m) squared. For adults it is a screening measure only, not a diagnosis.", "General adult screening education (verify against WHO / national guidance)"],
-  [/screening|diagnos/i, "Screening looks for possible signs in many people and does not confirm a condition. Diagnosis needs a qualified health professional.", "General public-health education"],
-  [/balanced|meal|diet|plate/i, "A balanced plate usually combines a cereal or millet, a pulse or protein food, vegetables including leafy greens and, when available, fruit.", "WHO healthy diet fact sheet; ICMR-NIN Dietary Guidelines for Indians (verify wording at source)"],
-];
-function Guide() {
-  const [log, setLog] = useState<{ w: string; t: string; s?: string }[]>([]); const [q, setQ] = useState("");
-  const ask = (e: FormEvent) => { e.preventDefault(); if (!q.trim()) return; let a = { w: "Guide", t: "I do not have an approved answer for that. Please ask a qualified health professional.", s: "" };
-    if (/chest pain|breath|faint|unconscious|seizure|stroke|bleeding|suicid|poison|snake/i.test(q)) a.t = "This may be urgent. Call 112 or go to the nearest health facility now. This tool cannot help with emergencies.";
-    else if (/medicine|medication|tablet|dose|insulin|prescri/i.test(q)) a.t = "I cannot advise on medicines or doses. Please ask your doctor or pharmacist.";
-    else { const m = FAQ.find(f => f[0].test(q)); if (m) { a.t = m[1]; a.s = m[2]; } }
-    setLog([...log, { w: "You", t: q }, a]); setQ(""); };
-  return <><h1>RuralCare Guide</h1><div className="note">Educational only. Answers come from a small approved list. No personal records are used and no AI model is connected. For how you feel right now, use the <Link to="/symptoms">Symptom Checker</Link>.</div>
-    <div className="card" aria-live="polite">{log.map((m, i) => <p key={i}><b>{m.w}:</b> {m.t}{m.s && <><br /><span className="tag">Source: {m.s}</span></>}</p>)}</div>
-    <form className="card" onSubmit={ask}><label htmlFor="q">Your question</label><input id="q" value={q} onChange={e => setQ(e.target.value)} /><button className="btn">Send</button></form></>;
 }
 
 /** After sign-in, apply the person's saved language preference once. */
