@@ -12,7 +12,8 @@ import { ThemeButton } from "./theme";
 import { LangContext } from "./icons";
 import { ToastProvider, useApi } from "./ui2";
 import { HealthDashboard, HealthDetail, HealthRecords, HealthHistory } from "./health";
-import { SymptomChecker, DietWellness, FindDoctor, ProfilePage, Privacy, Disclaimer, UserHome } from "./care";
+import { SymptomChecker, DietWellness, FindDoctor, ProfilePage, Privacy, Disclaimer } from "./care";
+import { UserHome } from "./home";
 import { AdminApp } from "./admin";
 
 const MINE: [string, string, string][] = [["/health", "Health Dashboard", "pulse"], ["/symptoms", "Symptom Checker", "search"], ["/records", "Health Records", "records"], ["/wellness", "Diet and Wellness", "leaf"], ["/history", "Health History", "clock"], ["/doctors", "Find a Doctor", "pin"], ["/profile", "Profile and Settings", "user"]];
