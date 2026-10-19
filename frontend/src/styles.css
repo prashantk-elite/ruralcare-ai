@@ -132,3 +132,5 @@ ul.plain.nums li{justify-content:flex-start;gap:6px}
 
 .quick,.actions,.greet>div{align-items:center}.quick .btn,.actions .btn{align-self:center}
 @media(max-width:820px){.side .brand{padding-left:56px}}
+.help-sec h2{display:flex;align-items:center;gap:8px}.help-sec details{border-top:1px solid var(--bd);padding:10px 0}.help-sec details:first-of-type{border-top:0}.help-sec summary{cursor:pointer;font-weight:600;padding:4px 0;min-height:32px}.help-sec details[open] summary{color:var(--pri)}.help-sec p{margin:6px 0 4px;max-width:70ch}.chip{text-decoration:none}
+html{scroll-behavior:smooth}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
