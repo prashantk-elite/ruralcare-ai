@@ -2,6 +2,7 @@
 import os, sys, tempfile, time
 os.environ.pop("DATABASE_URL", None)
 os.environ.pop("ANTHROPIC_API_KEY", None)
+os.environ.pop("GEMINI_API_KEY", None)
 os.environ["DB_PATH"] = os.path.join(tempfile.mkdtemp(), "f.db")
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 from fastapi.testclient import TestClient
@@ -558,3 +559,111 @@ def test_reset_events_and_audit_hold_no_secrets():
     rows = cn.execute("SELECT code_hash FROM password_resets WHERE status='used'").fetchall()
     cn.close()
     assert all(r["code_hash"] is None for r in rows)
+
+
+# ---------- Gemini assistant (provider call is mocked; the real API is not reachable from tests) ----------
+import assistant, llm
+
+
+def _chat(msg, hist=None, headers=None):
+    appmod._hits.clear()
+    return c.post("/api/assistant/chat", headers=headers or A, json={"message": msg, "history": hist or []})
+
+
+def test_assistant_needs_login_and_reports_not_configured(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert c.post("/api/assistant/chat", json={"message": "hi"}).status_code == 401
+    assert _chat("How much water should I drink?").json() == {"status": "not_configured", "answer": None}
+    assert c.get("/api/assistant/status", headers=A).json()["available"] is False
+
+
+def test_assistant_emergency_and_medicine_never_reach_the_ai(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    called = []
+    monkeypatch.setattr(assistant, "assistant_call", lambda s, t: called.append(1) or "x")
+    r = _chat("I have chest pain and cannot breathe").json()
+    assert r["status"] == "emergency" and r["urgent"] and "112" in r["answer"]
+    r = _chat("what dose of paracetamol for fever").json()
+    assert r["status"] == "medicine"
+    assert not called
+
+
+def test_assistant_ok_sends_scrubbed_text_and_filters_output(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    seen = {}
+    monkeypatch.setattr(assistant, "assistant_call", lambda s, t: seen.update(sys=s, turns=t) or "Drink water regularly through the day.")
+    r = _chat("my email is a@b.com and phone 9876543210, how much water?",
+              hist=[{"role": "assistant", "text": "Hello"}, {"role": "user", "text": "hi"}, {"role": "assistant", "text": "Hi!"}]).json()
+    assert r == {"status": "ok", "answer": "Drink water regularly through the day."}
+    sent = str(seen["turns"])
+    assert "a@b.com" not in sent and "9876543210" not in sent and "[email]" in sent
+    assert seen["turns"][0][0] == "user" and seen["turns"][-1][0] == "user"
+    assert all(seen["turns"][i][0] != seen["turns"][i + 1][0] for i in range(len(seen["turns"]) - 1))
+    assert "not a doctor" in seen["sys"]
+    monkeypatch.setattr(assistant, "assistant_call", lambda s, t: "You probably have diabetes, 90% likely.")
+    assert _chat("tell me about sugar").json() == {"status": "invalid_output", "answer": None}
+
+
+def test_assistant_failures_fall_back_and_admin_switch_works(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    def boom(s, t): raise RuntimeError("provider down")
+    monkeypatch.setattr(assistant, "assistant_call", boom)
+    assert _chat("what is a balanced meal").json() == {"status": "error", "answer": None}
+    H = admin_headers()
+    assert c.patch("/api/admin/settings", headers=H, json={"ai_enabled": False}).status_code == 200
+    try:
+        assert _chat("what is a balanced meal").json()["status"] == "disabled"
+        assert c.get("/api/assistant/status", headers=A).json()["available"] is False
+    finally:
+        c.patch("/api/admin/settings", headers=H, json={"ai_enabled": True})
+
+
+def test_assistant_is_rate_limited(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    monkeypatch.setattr(assistant, "assistant_call", lambda s, t: "Wash hands with soap.")
+    appmod._hits.clear()
+    codes = [c.post("/api/assistant/chat", headers=B, json={"message": "handwashing?"}).status_code for _ in range(6)]
+    assert codes[:4] == [200] * 4 and 429 in codes[4:]
+
+
+def test_llm_provider_selection(monkeypatch):
+    for k in ("GEMINI_API_KEY", "ANTHROPIC_API_KEY", "AI_PROVIDER", "GEMINI_MODEL"):
+        monkeypatch.delenv(k, raising=False)
+    assert llm.provider() == "" and not llm.available()
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "a")
+    assert llm.provider() == "anthropic"
+    monkeypatch.setenv("GEMINI_API_KEY", "g")
+    assert llm.provider() == "gemini"
+    monkeypatch.setenv("AI_PROVIDER", "anthropic")
+    assert llm.provider() == "anthropic"
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_MODEL", "my-model")
+    assert llm.model_name() == "my-model"
+
+
+def test_gemini_request_shape_and_parsing(monkeypatch):
+    import httpx
+    monkeypatch.setenv("GEMINI_API_KEY", "secret-key")
+    monkeypatch.delenv("AI_PROVIDER", raising=False)
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-test")
+    seen = {}
+
+    class R:
+        def __init__(self, data): self.data = data
+        def raise_for_status(self): pass
+        def json(self): return self.data
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        seen.update(url=url, headers=headers, body=json)
+        return R({"candidates": [{"content": {"parts": [{"text": "Hello "}, {"text": "there"}]}}]})
+    monkeypatch.setattr(httpx, "post", fake_post)
+    assert llm.generate("SYS", [("user", "hi"), ("model", "yo"), ("user", "q")]) == "Hello there"
+    assert seen["url"].endswith("/v1beta/models/gemini-test:generateContent") and "secret-key" not in seen["url"]
+    assert seen["headers"]["x-goog-api-key"] == "secret-key"
+    assert seen["body"]["systemInstruction"]["parts"][0]["text"] == "SYS"
+    assert [x["role"] for x in seen["body"]["contents"]] == ["user", "model", "user"]
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: R({"promptFeedback": {"blockReason": "SAFETY"}}))
+    assert llm.generate("S", [("user", "q")]) == ""
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: R({"candidates": []}))
+    assert llm.generate("S", [("user", "q")]) == ""

@@ -61,7 +61,7 @@ budget filters, anonymous nutrition feedback and insights, follow-ups with calen
 admin (health checks, users with role change and suspend, model versions, privacy), help, notifications, English/Hindi (labels and headings).
 
 ## Known gaps
-SQLite (not PostgreSQL), minimal token authentication, no password-reset flow, no AI-backed chatbot, Hindi covers labels not long text,
+SQLite (not PostgreSQL), minimal token authentication, no password-reset flow, the AI assistant is untested against the live Gemini service in CI (mocked), Hindi covers labels not long text,
 no verified food-composition or price data yet, no model trained on real data until you run `ml/train.py` with the dataset.
 
 ## Open sign-up and its limits
@@ -86,3 +86,18 @@ Owner admin: `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Optional: `SEED_DEMO_USERS=1` to a
 
 ## Forgot password (no email service needed)
 Sign-in page → Forgot password → the person requests a code. An administrator sees the request under Admin Portal → Users → Password reset requests, confirms the person's identity, and creates a one-time code (30 minutes, 5 tries, single use; only its hash is stored). The person enters the code and a new password, and every open session for that account is ended. Administrators can also create a code for any non-admin user from the Users list. Administrator accounts are reset on the server with `python backend/create_admin.py you@example.com`.
+
+
+## AI assistant (Google Gemini)
+
+The Guide page can answer free-text questions with Gemini. It is optional and off until a key is set.
+
+1. Create an API key in Google AI Studio.
+2. In Render, add environment variables `GEMINI_API_KEY` (the key) and, if you want, `GEMINI_MODEL`
+   (default `gemini-3.5-flash-lite`; check current names in Google AI Studio). Never put the key in the frontend or in git.
+3. Redeploy. Admin Portal > System shows the provider, model and recent status. Admin > Settings can switch AI off at any time.
+
+Safety: emergency wording and medicine/dose questions are answered by fixed rules and never sent to the AI; emails and phone
+numbers are removed from what is sent; no health records, name or email are sent; replies are filtered (no percentages, doses,
+diagnoses, links); each user is limited to 4 questions a minute and 20 an hour; any failure falls back to the approved-answers Guide.
+The same key also powers the optional wording layer of the Symptom Checker (it can only raise urgency, never lower it).

@@ -194,7 +194,7 @@ def register(app, m):
         import symptoms
         s = M.get_settings()
         return {"checked_at": now, "api": "ok", "database": dbs, "errors_24h": errs, "recent_errors": recent,
-                "ai": {"configured": symptoms.ai_available(), "enabled_in_settings": s["ai_enabled"], "assessments_with_ai_total": ai_total,
+                "ai": {"configured": symptoms.ai_available(), "provider": __import__("llm").provider() or None, "model": __import__("llm").model_name() if symptoms.ai_available() else None, "enabled_in_settings": s["ai_enabled"], "assessments_with_ai_total": ai_total,
                        "last_7_days_by_status": {r["ai_status"] or "unknown": r["n"] for r in ai_rows}},
                 "model_files_present": (M.MODEL_DIR / "model.joblib").exists() and (M.MODEL_DIR / "metrics.json").exists()}
 

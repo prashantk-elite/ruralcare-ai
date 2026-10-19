@@ -9,7 +9,7 @@ import json, os, re, time
 from typing import Optional, Literal
 from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel, Field, ValidationError
-import account
+import account, llm
 
 M = None  # the main module, set by register()
 ENGINE_VERSION = "rules-1.0"
@@ -475,19 +475,12 @@ def clean_ai_text(s, limit=300):
 
 
 def ai_available():
-    return bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
+    return llm.available()
 
 
 def _call_llm(system, user_msg):
-    """One call to the configured AI provider. Isolated so it can be replaced in tests."""
-    import httpx
-    r = httpx.post(os.environ.get("AI_API_URL", "https://api.anthropic.com/v1/messages"),
-                   headers={"x-api-key": os.environ["ANTHROPIC_API_KEY"], "anthropic-version": "2023-06-01", "content-type": "application/json"},
-                   json={"model": os.environ.get("AI_MODEL", "claude-sonnet-5-5"), "max_tokens": 700, "system": system,
-                         "messages": [{"role": "user", "content": user_msg}]},
-                   timeout=httpx.Timeout(12.0))
-    r.raise_for_status()
-    return "".join(p.get("text", "") for p in r.json().get("content", []) if p.get("type") == "text")
+    """One call to the configured AI provider (Gemini or Anthropic). Isolated so it can be replaced in tests."""
+    return llm.generate(system, [("user", user_msg)], max_tokens=1024, timeout=12.0)
 
 
 def ai_review(b, base):

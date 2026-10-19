@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "./icons";
+import { api } from "./api";
 
 type Topic = { id: string; title: string; icon: string; words: RegExp; q: string; a: string[]; src: string };
 const GEN = "General public-health education. Check the wording against current national guidance.";
@@ -49,10 +50,12 @@ const TOPICS: Topic[] = [
 const EMERGENCY = /chest pain|can'?t breathe|cannot breathe|short(ness)? of breath|faint|unconscious|seizure|fit\b|stroke|bleeding|suicid|poison|snake|overdose|self[- ]harm/i;
 const MEDICINE = /medicine|medication|tablet|capsule|dose|dosage|antibiotic|prescri|paracetamol|painkiller/i;
 
-type Msg = { who: "me" | "bot"; text: string[]; src?: string; urgent?: boolean };
+type Msg = { who: "me" | "bot"; text: string[]; src?: string; urgent?: boolean; ai?: boolean };
 
 export function Guide() {
   const [log, setLog] = useState<Msg[]>([]); const [q, setQ] = useState(""); const box = useRef<HTMLDivElement>(null);
+  const [aiOn, setAiOn] = useState(false); const [busy, setBusy] = useState(false);
+  useEffect(() => { api("/api/assistant/status").then(r => setAiOn(!!r.available)).catch(() => setAiOn(false)); }, []);
   useEffect(() => { const b = box.current; if (b && log.length) b.scrollTop = b.scrollHeight; }, [log]);
 
   const reply = (text: string): Msg => {
@@ -62,22 +65,37 @@ export function Guide() {
     if (hit) return { who: "bot", text: hit.t.a, src: hit.t.src };
     return { who: "bot", text: ["I do not have an approved answer for that. Please ask a qualified health professional, or pick one of the topics above."] };
   };
-  const ask = (text: string) => { const t = text.trim(); if (!t) return; setLog(l => [...l, { who: "me", text: [t] }, reply(t)]); setQ(""); };
-  const submit = (e: FormEvent) => { e.preventDefault(); ask(q); };
+  const ask = async (text: string) => {
+    const t = text.trim(); if (!t || busy) return;
+    setQ(""); setLog(l => [...l, { who: "me", text: [t] }]);
+    const local = reply(t);
+    // Emergency and medicine questions are always answered by fixed rules and never sent to the AI.
+    if (!aiOn || local.urgent || MEDICINE.test(t)) { setLog(l => [...l, local]); return; }
+    setBusy(true);
+    try {
+      const history = log.filter(m => !m.urgent).slice(-4).map(m => ({ role: m.who === "me" ? "user" : "assistant", text: m.text.join(" ").slice(0, 1500) }));
+      const r = await api("/api/assistant/chat", { method: "POST", body: JSON.stringify({ message: t, history }) });
+      if (r.status === "ok" && r.answer) setLog(l => [...l, { who: "bot", text: [r.answer], ai: true }]);
+      else if (r.answer) setLog(l => [...l, { who: "bot", text: [r.answer], urgent: !!r.urgent }]);
+      else setLog(l => [...l, local]);
+    } catch { setLog(l => [...l, local]); }
+    finally { setBusy(false); }
+  };
+  const submit = (e: FormEvent) => { e.preventDefault(); void ask(q); };
 
   return <>
     <h1>RuralCare Guide</h1>
     <p className="sub">Simple health education in plain language. Pick a topic or type a question.</p>
-    <div className="note">Educational only. Answers come from a small approved list. No personal records are used and no AI model is connected. For how you feel right now, use the <Link to="/symptoms">Symptom Checker</Link>. In an emergency call <a href="tel:112">112</a>.</div>
+    <div className="note">{aiOn ? "Educational only. Answers are written by an AI assistant (Google Gemini) and may contain mistakes. Do not type your name, phone number or other personal details. Your health records are never shared with it. If it is unavailable, answers come from a small approved list." : "Educational only. Answers come from a small approved list. No personal records are used and no AI model is connected."} For how you feel right now, use the <Link to="/symptoms">Symptom Checker</Link>. In an emergency call <a href="tel:112">112</a>.</div>
     <div className="card"><h2>Popular topics</h2>
-      <div className="topics">{TOPICS.map(t => <button key={t.id} type="button" className="topic" onClick={() => ask(t.q)}><Icon name={t.icon} size={16} />{t.title}</button>)}</div></div>
+      <div className="topics">{TOPICS.map(t => <button key={t.id} type="button" className="topic" onClick={() => { void ask(t.q); }}><Icon name={t.icon} size={16} />{t.title}</button>)}</div></div>
     <div className="card chat" ref={box} aria-live="polite" aria-label="Conversation">
       {!log.length && <div className="empty"><b>Ask me something</b><p className="muted">For example: "What is a balanced meal?" or "How do I stay safe in hot weather?" Tap any topic above to start.</p></div>}
       {log.map((m, i) => <div key={i} className={"bubble " + m.who + (m.urgent ? " urgent" : "")}>
-        <span className="who">{m.who === "me" ? "You" : "Guide"}</span>{m.text.map((p, n) => <p key={n}>{p}</p>)}{m.src && <span className="tag">Source: {m.src}</span>}</div>)}
+        <span className="who">{m.who === "me" ? "You" : m.ai ? "Guide (AI)" : "Guide"}</span>{m.text.map((p, n) => <p key={n}>{p}</p>)}{m.src && <span className="tag">Source: {m.src}</span>}{m.ai && <span className="tag">AI-generated. General information only, not medical advice.</span>}</div>)}
     </div>
     <form className="card" onSubmit={submit}><label htmlFor="q">Your question</label>
-      <div className="pwrow"><input id="q" value={q} maxLength={300} placeholder="Type a question, for example: how much water should I drink?" onChange={e => setQ(e.target.value)} /><button className="btn" disabled={!q.trim()}>Send</button></div>
+      <div className="pwrow"><input id="q" value={q} maxLength={300} placeholder="Type a question, for example: how much water should I drink?" onChange={e => setQ(e.target.value)} /><button className="btn" disabled={!q.trim() || busy}>{busy ? "Thinking…" : "Send"}</button></div>
       {log.length > 0 && <p className="small"><button type="button" className="linkbtn" onClick={() => setLog([])}>Clear conversation</button></p>}</form>
     <p className="muted small">The Guide cannot diagnose, advise on medicines or replace a doctor. Please check numbers and schedules with your local health centre.</p>
   </>;
