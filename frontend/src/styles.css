@@ -194,3 +194,17 @@ html{scroll-behavior:smooth}@media(prefers-reduced-motion:reduce){html{scroll-be
 .sideart{max-width:420px;justify-self:end;border-radius:20px}
 .guideart{max-height:200px;margin:0 0 14px;border-radius:18px;object-fit:cover}
 @media (max-width:820px){.herogrid,.splitrow{grid-template-columns:1fr}.heroart,.sideart{justify-self:center;max-width:100%}.heroart{order:-1;max-width:420px}.guideart{max-height:150px}}
+
+/* ---- Home: the Guide card is mint; each tab tile has its own light colour (no repeats) ---- */
+:root{--t-lilac:#EDE9FE;--t-aqua:#CFFAFE;--i-mint:#0F766E;--i-sky:#0369A1;--i-sand:#B45309;--i-rose:#BE123C;--i-lilac:#6D28D9;--i-aqua:#0E7490}
+:root[data-theme="dark"]{--t-lilac:#2A2250;--t-aqua:#0F3640;--i-mint:#4ADE9E;--i-sky:#7DD3FC;--i-sand:#FCD34D;--i-rose:#FDA4AF;--i-lilac:#C4B5FD;--i-aqua:#67E8F9}
+@media(prefers-color-scheme:dark){:root[data-theme="system"]{--t-lilac:#2A2250;--t-aqua:#0F3640;--i-mint:#4ADE9E;--i-sky:#7DD3FC;--i-sand:#FCD34D;--i-rose:#FDA4AF;--i-lilac:#C4B5FD;--i-aqua:#67E8F9}}
+.t-lilac{background:var(--t-lilac)}.t-aqua{background:var(--t-aqua)}
+.home .tile{border-color:var(--bd)}
+.home .tile .ico{background:var(--card)}
+.home .t-mint .ico{color:var(--i-mint)}.home .t-sky .ico{color:var(--i-sky)}.home .t-sand .ico{color:var(--i-sand)}
+.home .t-rose .ico{color:var(--i-rose)}.home .t-lilac .ico{color:var(--i-lilac)}.home .t-aqua .ico{color:var(--i-aqua)}
+:root[data-theme="dark"] .home .tile .ico{background:rgba(255,255,255,.08)}
+.home .tile:hover,.home .tile:focus-visible{box-shadow:0 6px 18px rgba(15,23,22,.12)}
+.home .tip{background:var(--t-mint);color:var(--tx);border:1px solid var(--bd)}
+.home .tip-k,.home .tip-more{color:var(--pri)}.home .tip-more{font-weight:600}

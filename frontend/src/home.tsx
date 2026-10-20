@@ -74,8 +74,8 @@ export function UserHome({ name }: { name: string }) {
       <Link to="/records" className="tile t-sky"><span className="ico"><Icon name="records" size={22} /></span><b>Health Records</b><span>Add, edit and filter what you have recorded.</span></Link>
       <Link to="/wellness" className="tile t-sand"><span className="ico"><Icon name="leaf" size={22} /></span><b>Diet and Wellness</b><span>Affordable meal ideas that respect your allergies.</span></Link>
       <Link to="/doctors" className="tile t-rose"><span className="ico"><Icon name="pin" size={22} /></span><b>Find a Doctor</b><span>Which specialist to see, and emergency numbers.</span></Link>
-      <Link to="/history" className="tile t-sky"><span className="ico"><Icon name="clock" size={22} /></span><b>Health History</b><span>Records, symptom checks and plans in one timeline.</span></Link>
-      <Link to="/guide" className="tile t-mint"><span className="ico"><Icon name="chat" size={22} /></span><b>Guide</b><span>Plain-language answers to common health questions.</span></Link>
+      <Link to="/history" className="tile t-lilac"><span className="ico"><Icon name="clock" size={22} /></span><b>Health History</b><span>Records, symptom checks and plans in one timeline.</span></Link>
+      <Link to="/guide" className="tile t-aqua"><span className="ico"><Icon name="chat" size={22} /></span><b>Guide</b><span>Plain-language answers to common health questions.</span></Link>
     </div>
 
     <aside className="sos" aria-label="Emergency numbers">
