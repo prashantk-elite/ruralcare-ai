@@ -365,5 +365,5 @@ def register(app, m):
             "week_avg_sleep": round(sum(week) / len(week), 1) if week else None, "week_sleep_days": len(week),
             "recent": [shape(r) for r in recent], "total_records": stamp["n"],
             "last_updated": stamp["m"], "bmi_note": BMI_NOTE,
-            "data_note": "Every value on this page was typed in by you. RuralCare AI does not read steps, heart rate, blood pressure, sleep or glucose from any device.",
+            "data_note": "Every value on this page was typed in by you. Arogya AI does not read steps, heart rate, blood pressure, sleep or glucose from any device.",
         }

@@ -1,4 +1,4 @@
-# RuralCare AI (educational research prototype)
+# Arogya AI (educational research prototype)
 Not a medical device. Demo/synthetic data only. No diagnoses, no medication advice.
 
 ## Layout

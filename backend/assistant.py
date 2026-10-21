@@ -18,7 +18,7 @@ MEDICINE = re.compile(r"medicine|medication|tablet|capsule|\bdose|dosage|antibio
 EMERGENCY_REPLY = "This may be an emergency. Call 112 now (or 108 for an ambulance) or go to the nearest hospital. I cannot help with emergencies."
 MEDICINE_REPLY = "I cannot advise on medicines or doses. Please ask your doctor or pharmacist."
 SYSTEM = (
-    "You are the RuralCare Guide, a health-education assistant for people in rural India. You give general, plain-language "
+    "You are the Arogya Guide, a health-education assistant for people in rural India. You give general, plain-language "
     "information about healthy living, nutrition, hygiene, prevention, pregnancy and child care basics, and when to seek care. "
     "Rules you must always follow: You are not a doctor. Never diagnose, never say a person has or probably has a condition, "
     "and never give a probability or percentage. Never recommend, name or dose any medicine, supplement or home remedy that "

@@ -78,7 +78,7 @@ def register(app, m):
         districts = [r["district"] for r in c.execute("SELECT DISTINCT district FROM facilities WHERE active=1 ORDER BY district").fetchall()]
         c.close()
         return {"items": [dict(r) for r in rows], "total": total, "districts": districts, "types": TYPES,
-                "note": "Details are entered by RuralCare AI administrators from the source shown. Always call ahead, because hours and services change."}
+                "note": "Details are entered by Arogya AI administrators from the source shown. Always call ahead, because hours and services change."}
 
     @app.get("/api/admin/facilities")
     def admin_list(u=Depends(admin)):

@@ -45,7 +45,7 @@ function Login({ onLogin, notice, onBack }: { onLogin: (role: string) => void; n
       const r = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password: pw }) }); setToken(r.token); onLogin(r.role); }
     catch (x: any) { setErr(x.message); } finally { setBusy(false); } };
   if (recover) return <main style={{ maxWidth: 440 }}><div className="card"><Recover email={email} onBack={() => setRecover(false)} /></div></main>;
-  return <main style={{ maxWidth: 440 }}><div className="card"><div style={{ float: "right" }}><ThemeButton /></div><h1>RuralCare AI</h1>
+  return <main style={{ maxWidth: 440 }}><div className="card"><div style={{ float: "right" }}><ThemeButton /></div><h1>Arogya AI</h1>
     <div className="note">Academic project. Not a medical service. In an emergency call <a href="tel:112">112</a>.</div>
     {notice && <div className="note" role="status">{notice}</div>}
     <div role="tablist" style={{ display: "flex", gap: 6 }}><button role="tab" aria-selected={mode === "in"} className={mode === "in" ? "btn sm" : "btn sec sm"} onClick={() => { setMode("in"); setErr(""); }}>Sign in</button><button role="tab" aria-selected={mode === "up"} className={mode === "up" ? "btn sm" : "btn sec sm"} onClick={() => { setMode("up"); setErr(""); }}>Create account</button></div>
@@ -105,7 +105,7 @@ function ApplyProfile({ setLang }: { setLang: (l: Lang) => void }) {
 function Greeting({ role }: { role: string }) { const p = useApi<any>("/api/profile"); return role === "participant" ? <UserHome name={p.data?.display_name || ""} /> : <Dashboard role={role} />; }
 
 function PublicPage({ children }: { children: React.ReactNode }) {
-  return <><div className="nav-l"><b>RuralCare AI</b><ThemeButton /><Link className="btn sm" to="/">Home</Link></div><main style={{ maxWidth: 760 }}>{children}</main><Foot /></>;
+  return <><div className="nav-l"><b>Arogya AI</b><ThemeButton /><Link className="btn sm" to="/">Home</Link></div><main style={{ maxWidth: 760 }}>{children}</main><Foot /></>;
 }
 
 export default function App() {

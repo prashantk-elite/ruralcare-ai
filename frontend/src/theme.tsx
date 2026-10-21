@@ -1,6 +1,6 @@
 import { useState } from "react";
 export type Theme = "light" | "dark" | "system";
-const KEY = "ruralcare-theme"; // only the theme choice is stored; never health data
+const KEY = "arogya-theme"; // only the theme choice is stored; never health data
 export function getTheme(): Theme {
   try { const v = localStorage.getItem(KEY); if (v === "light" || v === "dark" || v === "system") return v; } catch { /* storage unavailable */ }
   return "light";
@@ -15,7 +15,7 @@ const DESC: Record<Theme, string> = { light: "Bright and clear", dark: "Easier i
 export function ThemePicker() {
   const [t, setT] = useState<Theme>(getTheme());
   const pick = (v: Theme) => { setT(v); applyTheme(v); };
-  return <div className="card"><h2>Appearance</h2><p className="muted" style={{ margin: 0 }}>Choose how RuralCare AI looks on this device.</p>
+  return <div className="card"><h2>Appearance</h2><p className="muted" style={{ margin: 0 }}>Choose how Arogya AI looks on this device.</p>
     <div role="radiogroup" aria-label="Theme" className="tiles">{(["light", "dark", "system"] as Theme[]).map(v =>
       <button key={v} role="radio" aria-checked={t === v} className={"tile" + (t === v ? " sel" : "")} onClick={() => pick(v)}>
         <span className="pv" style={{ background: PREV[v] }} /><b>{LABEL[v]}</b><span className="muted">{DESC[v]}</span></button>)}</div></div>;

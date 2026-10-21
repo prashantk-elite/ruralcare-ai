@@ -1,4 +1,4 @@
-"""RuralCare AI API. Academic project: health tracking, symptom information, wellness guidance and an admin portal."""
+"""Arogya AI API. Academic project: health tracking, symptom information, wellness guidance and an admin portal."""
 import os, re, hmac, hashlib, json, time, base64, sqlite3, secrets, datetime, sys
 from pathlib import Path
 from typing import Optional, Literal
@@ -16,7 +16,7 @@ USER_SESSION_SECONDS = 3600          # normal sign-in lasts one hour
 ADMIN_SESSION_SECONDS = 1800         # administrator sign-in lasts 30 minutes
 ADMIN_IDLE_SECONDS = 1200            # ...and ends after 20 minutes without a request
 TZ_OFFSET = int(os.environ.get("PLATFORM_TZ_OFFSET_SECONDS", "19800"))  # IST: "day" boundaries for activity counts
-app = FastAPI(title="RuralCare AI API", version="1.0")
+app = FastAPI(title="Arogya AI API", version="1.0")
 app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(","),
                    allow_methods=["*"], allow_headers=["*"], expose_headers=["X-Total-Count"])
 
@@ -621,7 +621,7 @@ def participant_profile(pid: int, u=Depends(need("worker"))):
             "screenings": [dict(r) for r in screenings], "followups": [dict(r) for r in fups]}
 
 
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])  # HEAD lets free uptime monitors ping it
 def health():
     """Real checks only: database connectivity and presence of model files."""
     try:

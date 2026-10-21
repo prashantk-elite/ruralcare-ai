@@ -1,4 +1,4 @@
-# RuralCare AI: architecture and database
+# Arogya AI: architecture and database
 ```mermaid
 flowchart LR
   U[Browser: React + TypeScript] -->|HTTPS + Bearer token| A[FastAPI API]

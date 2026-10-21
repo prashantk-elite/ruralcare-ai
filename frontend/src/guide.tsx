@@ -85,7 +85,7 @@ export function Guide() {
   const submit = (e: FormEvent) => { e.preventDefault(); void ask(q); };
 
   return <>
-    <h1>RuralCare Guide</h1>
+    <h1>Arogya Guide</h1>
     <p className="sub">Simple health education in plain language. Pick a topic or type a question.</p>
     <WaterScene className="guideart" />
     <div className="note">{aiOn ? "Educational only. Answers are written by an AI assistant (Google Gemini) and may contain mistakes. Do not type your name, phone number or other personal details. Your health records are never shared with it. If it is unavailable, answers come from a small approved list." : "Educational only. Answers come from a small approved list. No personal records are used and no AI model is connected."} For how you feel right now, use the <Link to="/symptoms">Symptom Checker</Link>. In an emergency call <a href="tel:112">112</a>.</div>

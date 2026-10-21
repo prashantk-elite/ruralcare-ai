@@ -65,7 +65,7 @@ export function Help() {
   const count = shown.reduce((n, s) => n + s.items.length, 0);
   return <>
     <h1>Help and Documentation</h1>
-    <p className="sub">Guides for every part of RuralCare AI. This is an academic project and not a medical service.</p>
+    <p className="sub">Guides for every part of Arogya AI. This is an academic project and not a medical service.</p>
     <div className="note"><b>In an emergency, call <a href="tel:112">112</a> now.</b> Do not use this website to decide whether to seek urgent care.</div>
     <div className="card"><label htmlFor="help-q">Search help</label>
       <input id="help-q" type="search" placeholder="For example: units, delete, emergency" value={term} onChange={e => setTerm(e.target.value)} />
@@ -77,6 +77,6 @@ export function Help() {
         <summary>{i.q}</summary>{i.a.map((p, n) => <p key={n} className="muted">{p}</p>)}</details>; })}
     </section>)}
     {!count && <div className="card empty"><b>No help found for that search.</b><p className="muted">Try a shorter word, or clear the box to see every topic.</p></div>}
-    <div className="card"><h2>More information</h2><ul className="plain"><li><Link to="/privacy">Privacy notice</Link></li><li><Link to="/disclaimer">Medical disclaimer</Link></li><li><Link to="/guide">Ask the RuralCare Guide</Link></li></ul></div>
+    <div className="card"><h2>More information</h2><ul className="plain"><li><Link to="/privacy">Privacy notice</Link></li><li><Link to="/disclaimer">Medical disclaimer</Link></li><li><Link to="/guide">Ask the Arogya Guide</Link></li></ul></div>
   </>;
 }

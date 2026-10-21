@@ -65,7 +65,7 @@ export function RecordModal({ kind, record, onClose, onSaved }: { kind?: string;
       <select id="rm-kind" value={k} disabled={editing} onChange={e => { setK(e.target.value); setErr(""); }}>{KINDS.map(x => <option key={x.id} value={x.id}>{x.label}</option>)}</select>
       {k === "bp" && <div className="row">{field("systolic", "Systolic, the top number (mmHg)")}{field("diastolic", "Diastolic, the bottom number (mmHg)")}</div>}
       {k === "heart_rate" && field("value", "Heart rate (beats per minute)")}
-      {k === "steps" && <>{field("value", "Steps for the day or period", { inputMode: "numeric" })}<p className="muted">Steps are typed in by you. RuralCare AI does not connect to a pedometer or phone, so it cannot import them.</p></>}
+      {k === "steps" && <>{field("value", "Steps for the day or period", { inputMode: "numeric" })}<p className="muted">Steps are typed in by you. Arogya AI does not connect to a pedometer or phone, so it cannot import them.</p></>}
       {k === "weight" && <div><label htmlFor="rm-value">Weight</label><div className="inline">{<input id="rm-value" inputMode="decimal" value={f.value} onChange={set("value")} />}{unitSel("unit", ["kg", "lb"])}</div></div>}
       {k === "bmi" && <>
         <div><label htmlFor="rm-height">Height</label><div className="inline"><input id="rm-height" inputMode="decimal" value={f.height} onChange={set("height")} />{unitSel("height_unit", ["cm", "in"])}</div></div>

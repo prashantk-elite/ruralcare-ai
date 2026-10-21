@@ -22,7 +22,7 @@ function AdminLogin({ notice, onDone }: { notice: string; onDone: () => void }) 
   };
   return <main className="adm-login"><div className="card">
     <div className="adm-badge"><Icon name="shield" size={26} /></div><h1>Administrator sign-in</h1>
-    <p className="muted">For authorised RuralCare AI administrators only. Every sign-in is recorded. Administrator accounts cannot be created from this page.</p>
+    <p className="muted">For authorised Arogya AI administrators only. Every sign-in is recorded. Administrator accounts cannot be created from this page.</p>
     {notice && <div className="note" role="status">{notice}</div>}
     <form onSubmit={submit} noValidate>
       <label htmlFor="ae">Administrator email</label><input id="ae" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} />
@@ -30,7 +30,7 @@ function AdminLogin({ notice, onDone }: { notice: string; onDone: () => void }) 
         <button type="button" className="btn sec sm" onClick={() => setShow(!show)} aria-pressed={show}>{show ? "Hide" : "Show"}</button></div>
       <p className="err" role="alert">{err}</p>
       <button className="btn" disabled={busy}>{busy ? "Signing in…" : "Sign in as administrator"}</button></form>
-    <p className="muted small"><Link to="/">← Back to RuralCare AI</Link></p></div></main>;
+    <p className="muted small"><Link to="/">← Back to Arogya AI</Link></p></div></main>;
 }
 
 /* ================= Shell ================= */
@@ -45,7 +45,7 @@ function AdminShell({ onLogout, children }: { onLogout: () => void; children: Re
   const me = useApi<any>("/api/admin/me"); const [open, setOpen] = useState(false); const loc = useLocation(); const [ask, setAsk] = useState(false);
   useEffect(() => setOpen(false), [loc.pathname]);
   return <div className="shell adm"><button className="menu-btn" onClick={() => setOpen(!open)} aria-label="Menu" aria-expanded={open}><Icon name={open ? "close" : "menu"} /></button>
-    <aside className={"side" + (open ? " open" : "")} aria-label="Administrator navigation"><div className="brand"><span className="logo" aria-hidden><Icon name="shield" size={18} /></span><span>RuralCare<small>Administration</small></span></div>
+    <aside className={"side" + (open ? " open" : "")} aria-label="Administrator navigation"><div className="brand"><span className="logo" aria-hidden><Icon name="shield" size={18} /></span><span>Arogya<small>Administration</small></span></div>
       <nav>{NAV.map(([to, l, ic]) => <NavLink key={to} to={to}><Icon name={ic} size={18} />{l}</NavLink>)}</nav>
       <div className="side-foot"><Link to="/" className="portal-link"><Icon name="home" size={16} />Back to the site</Link></div></aside>
     {open && <div className="scrim" onClick={() => setOpen(false)} />}
